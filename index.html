@@ -336,7 +336,7 @@ function render() {
           <div style="flex:1;">
             <label style="${LBL}">Monto</label>
             <input id="f-monto" type="text" inputmode="numeric" value="${form.monto?Number(form.monto).toLocaleString("es-CO"):""}"
-              oninput="formatMonto(this)" placeholder="0" style="${INP}" />
+              oninput="formatMonto(this)" placeholder="${S.form.moneda==='COP'?'0':'0.00'}" style="${INP}" />
           </div>
           <div style="flex:1;">
             <label style="${LBL}">Fecha</label>
@@ -413,7 +413,7 @@ function render() {
                   ${r.nota?`<p style="font-size:13px;color:#999;margin-top:6px;line-height:1.45;font-style:italic;">${esc(r.nota)}</p>`:""}
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
-                  <p style="font-size:16px;font-weight:700;color:${esGasto?"#D94F3D":"#3DAD7F"};">${esGasto?"−":"+"}${mon.simbolo}${Number(r.monto).toLocaleString("es-CO")}</p>
+                  <p style="font-size:16px;font-weight:700;color:${esGasto?"#D94F3D":"#3DAD7F"};">${esGasto?"−":"+"}${mon.simbolo}${r.moneda==="COP"?Number(r.monto).toLocaleString("es-CO"):Number(r.monto).toLocaleString("en-US")}</p>
                   ${eliminarId===r.id
                     ? `<div style="display:flex;gap:5px;margin-top:6px;justify-content:flex-end;">
                         <button onclick="accionEliminar(${r.id})" style="font-size:11px;font-weight:600;color:#D94F3D;background:#D94F3D14;border-radius:6px;padding:3px 9px;">Eliminar</button>
@@ -508,7 +508,13 @@ function syncForm() {
   const fm = document.getElementById("f-monto");
   const fn = document.getElementById("f-nota");
   if (fd) S.form.descripcion = fd.value;
-  if (fm) S.form.monto = fm.value.replace(/\./g,"").replace(/\D/g,"");
+  if (fm) {
+    if (S.form.moneda === "COP") {
+      S.form.monto = fm.value.replace(/\./g,"").replace(/\D/g,"");
+    } else {
+      S.form.monto = fm.value; // already formatted as "207.47"
+    }
+  }
   if (fn) S.form.nota = fn.value;
 }
 
@@ -521,9 +527,21 @@ function actualizarBtn() {
 }
 
 function formatMonto(el) {
+  const moneda = S.form.moneda;
   const raw = el.value.replace(/\D/g,"");
-  S.form.monto = raw;
-  el.value = raw ? Number(raw).toLocaleString("es-CO") : "";
+  if (!raw) { S.form.monto = ""; el.value = ""; actualizarBtn(); return; }
+  if (moneda === "COP") {
+    S.form.monto = raw;
+    const pos = el.selectionStart, prevLen = el.value.length;
+    el.value = Number(raw).toLocaleString("es-CO");
+    try { el.setSelectionRange(pos + el.value.length - prevLen, pos + el.value.length - prevLen); } catch(e){}
+  } else {
+    // USD/EUR: auto insert 2 decimals — 20747 → 207.47
+    const num = parseInt(raw, 10);
+    const formatted = (num / 100).toFixed(2);
+    S.form.monto = formatted;
+    el.value = formatted;
+  }
   actualizarBtn();
 }
 
@@ -533,7 +551,13 @@ async function accionGuardar() {
   const fm = document.getElementById("f-monto");
   const fn = document.getElementById("f-nota");
   if (fd) S.form.descripcion = fd.value.trim();
-  if (fm) S.form.monto = fm.value.replace(/\./g,"").replace(/\D/g,"");
+  if (fm) {
+    if (S.form.moneda === "COP") {
+      S.form.monto = fm.value.replace(/\./g,"").replace(/\D/g,"");
+    } else {
+      S.form.monto = fm.value; // already formatted as "207.47"
+    }
+  }
   if (fn) S.form.nota = fn.value.trim();
 
   if (!S.form.descripcion || !S.form.monto) {
@@ -557,7 +581,7 @@ async function accionGuardar() {
 
   try {
     const guardado = await dbGuardar(obj);
-    if (guardado) S.registros.push(guardado);
+    if (guardado) S.registros.unshift(guardado);
     S.form = formVacio(S.tab);
     S.mostrarForm = false;
     render();
@@ -593,7 +617,13 @@ async function accionActualizar() {
   const fm = document.getElementById("f-monto");
   const fn = document.getElementById("f-nota");
   if (fd) S.form.descripcion = fd.value.trim();
-  if (fm) S.form.monto = fm.value.replace(/\./g,"").replace(/\D/g,"");
+  if (fm) {
+    if (S.form.moneda === "COP") {
+      S.form.monto = fm.value.replace(/\./g,"").replace(/\D/g,"");
+    } else {
+      S.form.monto = fm.value; // already formatted as "207.47"
+    }
+  }
   if (fn) S.form.nota = fn.value.trim();
 
   if (!S.form.descripcion || !S.form.monto) { alert("Completa descripción y monto"); return; }
