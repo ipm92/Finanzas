@@ -319,6 +319,11 @@ function render() {
       ${mostrarForm ? `
       <div class="fade" style="background:#fff;border:1px solid #E8E6E1;border-radius:16px;padding:20px;margin-top:16px;">
 
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button onclick="syncForm();S.form.tipo='gasto';S.tab='gasto';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='gasto'?'#D94F3D14':'#F7F6F3'};color:${form.tipo==='gasto'?'#D94F3D':'#777'};border:1.5px solid ${form.tipo==='gasto'?'#D94F3D55':'#E8E6E1'};">Gasto</button>
+          <button onclick="syncForm();S.form.tipo='ingreso';S.tab='ingreso';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='ingreso'?'#3DAD7F14':'#F7F6F3'};color:${form.tipo==='ingreso'?'#3DAD7F':'#777'};border:1.5px solid ${form.tipo==='ingreso'?'#3DAD7F55':'#E8E6E1'};">Ingreso</button>
+        </div>
+
         <div style="margin-bottom:16px;">
           <label style="${LBL}">Descripción</label>
           <input id="f-desc" type="text" value="${esc(form.descripcion)}" oninput="S.form.descripcion=this.value;actualizarBtn()"
