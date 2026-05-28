@@ -308,8 +308,8 @@ function render() {
         </div>
         <!-- Nav principal -->
         <div style="display:flex;gap:6px;margin-top:14px;">
-          <button onclick="S.seccion='registros';render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='registros'?'#1a1a1a':'transparent'};color:${S.seccion==='registros'?'#fff':'#999'};border:1.5px solid ${S.seccion==='registros'?'#1a1a1a':'#E8E6E1'};">Registros</button>
-          <button onclick="S.seccion='recordatorios';if(!S.recordatorios.length)cargarRec();render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='recordatorios'?'#1a1a1a':'transparent'};color:${S.seccion==='recordatorios'?'#fff':'#999'};border:1.5px solid ${S.seccion==='recordatorios'?'#1a1a1a':'#E8E6E1'};">Recordatorios</button>
+          <button onclick="S.seccion='registros';S.formRec=null;render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='registros'?'#1a1a1a':'transparent'};color:${S.seccion==='registros'?'#fff':'#999'};border:1.5px solid ${S.seccion==='registros'?'#1a1a1a':'#E8E6E1'};">Registros</button>
+          <button onclick="S.seccion='recordatorios';S.mostrarForm=false;if(!S.recordatorios.length)cargarRec();render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='recordatorios'?'#1a1a1a':'transparent'};color:${S.seccion==='recordatorios'?'#fff':'#999'};border:1.5px solid ${S.seccion==='recordatorios'?'#1a1a1a':'#E8E6E1'};">Recordatorios</button>
         </div>
 
       </div>
@@ -318,7 +318,7 @@ function render() {
     <div class="safe-bot" style="max-width:500px;margin:0 auto;padding:0 16px;">
 
       <!-- FORMULARIO -->
-      ${mostrarForm ? `
+      ${mostrarForm && S.seccion==="registros" ? `
       <div class="fade" style="background:#fff;border:1px solid #E8E6E1;border-radius:16px;padding:20px;margin-top:16px;">
 
         <div style="display:flex;gap:8px;margin-bottom:16px;">
