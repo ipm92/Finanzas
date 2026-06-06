@@ -129,7 +129,7 @@ function formRecVacio() {
   return { tipo:"me_deben", descripcion:"", monto:"", moneda:"COP", fecha_limite:"", nota:"", pagado:false };
 }
 function formVacio(tipo) {
-  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"" };
+  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false };
 }
 
 // ── Estado ─────────────────────────────────────────────────────────────
@@ -423,10 +423,10 @@ function render() {
               const isFirst = i===0, isLast = i===lista.length-1;
               const rad = `${isFirst?"12px 12px":"4px 4px"} ${isLast?"12px 12px":"4px 4px"}`;
               return `
-              <div class="row" style="background:#fff;border-radius:${rad};padding:14px 16px;display:flex;align-items:center;gap:14px;">
-                <div style="width:3px;height:36px;border-radius:2px;flex-shrink:0;background:${esGasto?"#D94F3D":"#3DAD7F"};"></div>
+              <div class="row" style="background:${r.enExcel?"#fafafa":"#fff"};border-radius:${rad};padding:14px 16px;display:flex;align-items:center;gap:14px;opacity:${r.enExcel?"0.6":"1"};">
+                <div style="width:3px;height:36px;border-radius:2px;flex-shrink:0;background:${esGasto?"#D94F3D":"#3DAD7F"};${r.enExcel?"opacity:0.4":""}"></div>
                 <div style="flex:1;min-width:0;">
-                  <p style="font-size:15px;font-weight:600;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.descripcion)}</p>
+                  <p style="font-size:15px;font-weight:600;color:${r.enExcel?"#aaa":"#1a1a1a"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.enExcel?"text-decoration:line-through":""}">${esc(r.descripcion)}</p>
                   <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
                     <span style="font-size:11px;font-weight:500;color:${info.color||"#888"};background:${info.color||"#888"}14;padding:2px 8px;border-radius:20px;">${r.cuenta==="otro"&&r.cuentaOtro?r.cuentaOtro:(info.label||"")}</span>
                     <span style="font-size:11px;color:#bbb;">${formatFecha(r.fecha)}</span>
@@ -445,6 +445,7 @@ function render() {
                     : `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
                         <button onclick="S.eliminarId=${r.id};render()" style="font-size:16px;color:#ddd;line-height:1;">×</button>
                         <button onclick="accionEditar(${r.id})" style="font-size:11px;color:#bbb;font-weight:500;background:#F0EDE8;border-radius:6px;padding:2px 8px;">editar</button>
+                        <button onclick="accionToggleExcel(${r.id})" style="font-size:11px;font-weight:500;border-radius:6px;padding:2px 8px;${r.enExcel?"color:#3DAD7F;background:#3DAD7F14;":"color:#bbb;background:#F0EDE8;"}">${r.enExcel?"✓ Excel":"Excel"}</button>
                       </div>`}
                 </div>
               </div>`;
@@ -517,6 +518,17 @@ async function accionEliminarRec(id) {
 async function cargarRec() {
   try { S.recordatorios=await dbCargarRec()||[]; render(); } catch(e){ S.recordatorios=[]; render(); }
 }
+async function accionToggleExcel(id) {
+  const r = S.registros.find(x => x.id === id);
+  if (!r) return;
+  const nuevoValor = !r.enExcel;
+  try {
+    await xhr("PATCH", API + "?id=eq." + id + "&apikey=" + SUPABASE_KEY, { enExcel: nuevoValor });
+    S.registros = S.registros.map(x => x.id === id ? {...x, enExcel: nuevoValor} : x);
+    render();
+  } catch(e) { alert("Error: " + e.message); }
+}
+
 function accionSetTab(t) { S.tab=t; S.form=formVacio(t); S.mostrarForm=false; render(); }
 
 function accionToggleForm() {
@@ -605,6 +617,7 @@ async function accionGuardar() {
     moneda:      S.form.moneda,
     splitwise:   S.form.splitwise,
     release:     S.form.release || false,
+    enExcel:     S.form.enExcel || false,
   };
 
   try {
@@ -629,6 +642,7 @@ function accionEditar(id) {
     monto:       String(r.monto || ""),
     release:     r.release || false,
     cuentaOtro:  r.cuentaOtro || "",
+    enExcel:     r.enExcel || false,
     cuenta:      r.cuenta || "davi-td",
     fecha:       r.fecha || hoy(),
     moneda:      r.moneda || "COP",
@@ -675,6 +689,7 @@ async function accionActualizar() {
     moneda:      S.form.moneda,
     splitwise:   S.form.splitwise,
     release:     S.form.release || false,
+    enExcel:     S.form.enExcel || false,
   };
 
   try {
