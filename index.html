@@ -129,7 +129,7 @@ function formRecVacio() {
   return { tipo:"me_deben", descripcion:"", monto:"", moneda:"COP", fecha_limite:"", nota:"", pagado:false };
 }
 function formVacio(tipo) {
-  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false };
+  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false };
 }
 
 // ── Estado ─────────────────────────────────────────────────────────────
@@ -326,6 +326,7 @@ function render() {
         <div style="display:flex;gap:8px;margin-bottom:16px;">
           <button onclick="syncForm();S.form.tipo='gasto';S.tab='gasto';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='gasto'?'#D94F3D14':'#F7F6F3'};color:${form.tipo==='gasto'?'#D94F3D':'#777'};border:1.5px solid ${form.tipo==='gasto'?'#D94F3D55':'#E8E6E1'};">Gasto</button>
           <button onclick="syncForm();S.form.tipo='ingreso';S.tab='ingreso';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='ingreso'?'#3DAD7F14':'#F7F6F3'};color:${form.tipo==='ingreso'?'#3DAD7F':'#777'};border:1.5px solid ${form.tipo==='ingreso'?'#3DAD7F55':'#E8E6E1'};">Ingreso</button>
+          <button onclick="syncForm();S.form.tipo='movimiento';S.tab='movimiento';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='movimiento'?'#7B4FBF14':'#F7F6F3'};color:${form.tipo==='movimiento'?'#7B4FBF':'#777'};border:1.5px solid ${form.tipo==='movimiento'?'#7B4FBF55':'#E8E6E1'};">Traslado</button>
         </div>
 
         <div style="margin-bottom:16px;">
@@ -365,7 +366,7 @@ function render() {
         </div>
 
         <div style="margin-bottom:16px;">
-          <label style="${LBL}">${tab==="gasto"?"Medio de pago":"Cuenta que recibe"}</label>
+          <label style="${LBL}">${form.tipo==="gasto"?"Medio de pago":form.tipo==="movimiento"?"Cuenta origen":"Cuenta que recibe"}</label>
           <div style="display:flex;flex-direction:column;gap:6px;">
             ${cuentas.map(c=>`
               <button onclick="syncForm();S.form.cuenta='${c.id}';render()" style="padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:left;background:${form.cuenta===c.id?c.color+"14":"#F7F6F3"};color:${form.cuenta===c.id?c.color:"#555"};border:1.5px solid ${form.cuenta===c.id?c.color+"55":"#E8E6E1"};">
@@ -373,6 +374,17 @@ function render() {
               </button>`).join("")}
           </div>
         </div>
+
+        ${form.tipo==='movimiento' ? `
+        <div style="margin-bottom:16px;">
+          <label style="${LBL}">Cuenta destino</label>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${[...CUENTAS_GASTO, ...CUENTAS_INGRESO.filter(x=>!CUENTAS_GASTO.find(g=>g.id===x.id))].map(c=>`
+              <button onclick="syncForm();S.form.cuentaDestino='${c.id}';render()" style="padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:left;background:${form.cuentaDestino===c.id?c.color+'14':'#F7F6F3'};color:${form.cuentaDestino===c.id?c.color:'#555'};border:1.5px solid ${form.cuentaDestino===c.id?c.color+'55':'#E8E6E1'};">
+                ${c.label}
+              </button>`).join("")}
+          </div>
+        </div>` : ""}
 
         ${form.cuenta==='otro' ? `
         <div style="margin-bottom:16px;">
@@ -406,7 +418,7 @@ function render() {
       ${S.seccion!=='registros' ? '' : ''}
       <!-- FILTROS -->
       ${S.seccion==='registros'?`<div style="display:flex;gap:6px;margin-top:20px;">
-        ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"]].map(([v,l])=>`
+        ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Traslados"]].map(([v,l])=>`
           <button onclick="S.filtro='${v}';render()" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1"};">
             ${l}
           </button>`).join("")}
@@ -424,7 +436,7 @@ function render() {
               const rad = `${isFirst?"12px 12px":"4px 4px"} ${isLast?"12px 12px":"4px 4px"}`;
               return `
               <div class="row" style="background:${r.enExcel?"#fafafa":"#fff"};border-radius:${rad};padding:14px 16px;display:flex;align-items:center;gap:14px;opacity:${r.enExcel?"0.6":"1"};">
-                <div style="width:3px;height:36px;border-radius:2px;flex-shrink:0;background:${esGasto?"#D94F3D":"#3DAD7F"};${r.enExcel?"opacity:0.4":""}"></div>
+                <div style="width:3px;height:36px;border-radius:2px;flex-shrink:0;background:${r.tipo==="movimiento"?"#7B4FBF":esGasto?"#D94F3D":"#3DAD7F"};${r.enExcel?"opacity:0.4":""}"></div>
                 <div style="flex:1;min-width:0;">
                   <p style="font-size:15px;font-weight:600;color:${r.enExcel?"#aaa":"#1a1a1a"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.enExcel?"text-decoration:line-through":""}">${esc(r.descripcion)}</p>
                   <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
@@ -612,6 +624,7 @@ async function accionGuardar() {
     nota:        S.form.nota,
     monto:       parseFloat(S.form.monto),
     cuenta:      S.form.cuenta,
+    cuentaDestino: S.form.cuentaDestino || "",
     cuentaOtro:  S.form.cuentaOtro || "",
     fecha:       S.form.fecha,
     moneda:      S.form.moneda,
@@ -642,6 +655,7 @@ function accionEditar(id) {
     monto:       String(r.monto || ""),
     release:     r.release || false,
     cuentaOtro:  r.cuentaOtro || "",
+    cuentaDestino: r.cuentaDestino || "davi-td",
     enExcel:     r.enExcel || false,
     cuenta:      r.cuenta || "davi-td",
     fecha:       r.fecha || hoy(),
@@ -684,6 +698,7 @@ async function accionActualizar() {
     nota:        S.form.nota,
     monto:       parseFloat(S.form.monto),
     cuenta:      S.form.cuenta,
+    cuentaDestino: S.form.cuentaDestino || "",
     cuentaOtro:  S.form.cuentaOtro || "",
     fecha:       S.form.fecha,
     moneda:      S.form.moneda,
