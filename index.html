@@ -95,8 +95,9 @@ const CUENTAS_GASTO = [
   { id:"rappi-tc",  label:"Rappi TC",               color:"#E05C3A" },
   { id:"nequi",     label:"Nequi",                  color:"#7B4FBF" },
   { id:"efectivo",  label:"Efectivo",               color:"#2E7D32" },
-  { id:"splitwise", label:"Splitwise",              color:"#1A73A7" },
+  { id:"splitwise", label:"Splitwise",              color:"#E8760A" },
   { id:"fic",       label:"FIC 1 Corredores",          color:"#00695C" },
+  { id:"otro",      label:"Otro",                    color:"#888888" },
 ];
 const CUENTAS_INGRESO = [
   { id:"davi-td",   label:"Davivienda Ahorros TD", color:"#D94F3D" },
@@ -106,6 +107,7 @@ const CUENTAS_INGRESO = [
   { id:"nubank",    label:"NuBank",                 color:"#6B2D9E" },
   { id:"daviplata", label:"Daviplata",              color:"#B8202A" },
   { id:"fic",       label:"FIC 1 Corredores",          color:"#00695C" },
+  { id:"otro",      label:"Otro",                    color:"#888888" },
 ];
 const MONEDAS = [
   { id:"COP", simbolo:"$",   label:"COP" },
@@ -127,7 +129,7 @@ function formRecVacio() {
   return { tipo:"me_deben", descripcion:"", monto:"", moneda:"COP", fecha_limite:"", nota:"", pagado:false };
 }
 function formVacio(tipo) {
-  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP" };
+  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"" };
 }
 
 // ── Estado ─────────────────────────────────────────────────────────────
@@ -372,6 +374,19 @@ function render() {
           </div>
         </div>
 
+        ${form.cuenta==='otro' ? `
+        <div style="margin-bottom:16px;">
+          <input id="f-cuentaOtro" type="text" value="${esc(form.cuentaOtro)}" oninput="S.form.cuentaOtro=this.value"
+            placeholder="" style="${INP}" />
+        </div>` : ""}
+
+        <div onclick="syncForm();S.form.release=!S.form.release;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:12px 14px;border-radius:10px;margin-bottom:12px;background:${form.release?"#E8760A14":"#F7F6F3"};border:1.5px solid ${form.release?"#E8760A55":"#E8E6E1"};">
+          <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.release?"#E8760A":"#D8D5CE"};position:relative;">
+            <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.release?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
+          </div>
+          <p style="font-size:13px;font-weight:500;color:${form.release?"#E8760A":"#888"};">Release</p>
+        </div>
+
         <div onclick="syncForm();S.form.splitwise=!S.form.splitwise;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:12px 14px;border-radius:10px;margin-bottom:16px;background:${form.splitwise?"#FFF8E8":"#F7F6F3"};border:1.5px solid ${form.splitwise?"#E8C84A":"#E8E6E1"};">
           <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.splitwise?"#E8C84A":"#D8D5CE"};position:relative;">
             <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.splitwise?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
@@ -413,9 +428,10 @@ function render() {
                 <div style="flex:1;min-width:0;">
                   <p style="font-size:15px;font-weight:600;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.descripcion)}</p>
                   <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
-                    <span style="font-size:11px;font-weight:500;color:${info.color||"#888"};background:${info.color||"#888"}14;padding:2px 8px;border-radius:20px;">${info.label||""}</span>
+                    <span style="font-size:11px;font-weight:500;color:${info.color||"#888"};background:${info.color||"#888"}14;padding:2px 8px;border-radius:20px;">${r.cuenta==="otro"&&r.cuentaOtro?r.cuentaOtro:(info.label||"")}</span>
                     <span style="font-size:11px;color:#bbb;">${formatFecha(r.fecha)}</span>
                     ${r.splitwise?`<span style="font-size:11px;font-weight:500;color:#A0862A;background:#FFF3C4;padding:2px 8px;border-radius:20px;">Splitwise</span>`:""}
+                    ${r.release?`<span style="font-size:11px;font-weight:500;color:#E8760A;background:#E8760A14;padding:2px 8px;border-radius:20px;">Release</span>`:""}
                   </div>
                   ${r.nota?`<p style="font-size:13px;color:#999;margin-top:6px;line-height:1.45;font-style:italic;">${esc(r.nota)}</p>`:""}
                 </div>
@@ -575,15 +591,20 @@ async function accionGuardar() {
   const btn = document.getElementById("btn-guardar");
   if (btn) { btn.innerText = "Guardando..."; btn.style.opacity = ".6"; btn.disabled = true; }
 
+  const co = document.getElementById("f-cuentaOtro");
+  if (co) S.form.cuentaOtro = co.value;
+
   const obj = {
     tipo:        S.form.tipo,
     descripcion: S.form.descripcion,
     nota:        S.form.nota,
     monto:       parseFloat(S.form.monto),
     cuenta:      S.form.cuenta,
+    cuentaOtro:  S.form.cuentaOtro || "",
     fecha:       S.form.fecha,
     moneda:      S.form.moneda,
     splitwise:   S.form.splitwise,
+    release:     S.form.release || false,
   };
 
   try {
@@ -606,6 +627,8 @@ function accionEditar(id) {
     descripcion: r.descripcion || "",
     nota:        r.nota || "",
     monto:       String(r.monto || ""),
+    release:     r.release || false,
+    cuentaOtro:  r.cuentaOtro || "",
     cuenta:      r.cuenta || "davi-td",
     fecha:       r.fecha || hoy(),
     moneda:      r.moneda || "COP",
@@ -638,15 +661,20 @@ async function accionActualizar() {
   const btn = document.getElementById("btn-guardar");
   if (btn) { btn.innerText = "Guardando..."; btn.style.opacity = ".6"; btn.disabled = true; }
 
+  const co = document.getElementById("f-cuentaOtro");
+  if (co) S.form.cuentaOtro = co.value;
+
   const obj = {
     tipo:        S.form.tipo,
     descripcion: S.form.descripcion,
     nota:        S.form.nota,
     monto:       parseFloat(S.form.monto),
     cuenta:      S.form.cuenta,
+    cuentaOtro:  S.form.cuentaOtro || "",
     fecha:       S.form.fecha,
     moneda:      S.form.moneda,
     splitwise:   S.form.splitwise,
+    release:     S.form.release || false,
   };
 
   try {
