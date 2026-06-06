@@ -326,7 +326,7 @@ function render() {
         <div style="display:flex;gap:8px;margin-bottom:16px;">
           <button onclick="syncForm();S.form.tipo='gasto';S.tab='gasto';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='gasto'?'#D94F3D14':'#F7F6F3'};color:${form.tipo==='gasto'?'#D94F3D':'#777'};border:1.5px solid ${form.tipo==='gasto'?'#D94F3D55':'#E8E6E1'};">Gasto</button>
           <button onclick="syncForm();S.form.tipo='ingreso';S.tab='ingreso';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='ingreso'?'#3DAD7F14':'#F7F6F3'};color:${form.tipo==='ingreso'?'#3DAD7F':'#777'};border:1.5px solid ${form.tipo==='ingreso'?'#3DAD7F55':'#E8E6E1'};">Ingreso</button>
-          <button onclick="syncForm();S.form.tipo='movimiento';S.tab='movimiento';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='movimiento'?'#7B4FBF14':'#F7F6F3'};color:${form.tipo==='movimiento'?'#7B4FBF':'#777'};border:1.5px solid ${form.tipo==='movimiento'?'#7B4FBF55':'#E8E6E1'};">Traslado</button>
+          <button onclick="syncForm();S.form.tipo='movimiento';S.tab='movimiento';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='movimiento'?'#7B4FBF14':'#F7F6F3'};color:${form.tipo==='movimiento'?'#7B4FBF':'#777'};border:1.5px solid ${form.tipo==='movimiento'?'#7B4FBF55':'#E8E6E1'};">Interno</button>
         </div>
 
         <div style="margin-bottom:16px;">
@@ -418,7 +418,7 @@ function render() {
       ${S.seccion!=='registros' ? '' : ''}
       <!-- FILTROS -->
       ${S.seccion==='registros'?`<div style="display:flex;gap:6px;margin-top:20px;">
-        ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Traslados"]].map(([v,l])=>`
+        ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Internos"]].map(([v,l])=>`
           <button onclick="S.filtro='${v}';render()" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1"};">
             ${l}
           </button>`).join("")}
