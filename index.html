@@ -435,8 +435,8 @@ function render() {
               const isFirst = i===0, isLast = i===lista.length-1;
               const rad = `${isFirst?"12px 12px":"4px 4px"} ${isLast?"12px 12px":"4px 4px"}`;
               return `
-              <div class="row" style="background:${r.enExcel?"#fafafa":"#fff"};border-radius:${rad};padding:14px 16px;display:flex;align-items:center;gap:14px;opacity:${r.enExcel?"0.6":"1"};">
-                <div style="width:3px;height:36px;border-radius:2px;flex-shrink:0;background:${r.tipo==="movimiento"?"#7B4FBF":esGasto?"#D94F3D":"#3DAD7F"};${r.enExcel?"opacity:0.4":""}"></div>
+              <div class="row" style="background:${r.tipo==="movimiento"?"repeating-linear-gradient(-45deg,#F8F8F8,#F8F8F8 4px,#EEEEEE 4px,#EEEEEE 5px)":r.enExcel?"#fafafa":"#fff"};border-radius:${rad};padding:14px 16px;display:flex;align-items:center;gap:14px;opacity:${r.enExcel?"0.6":"1"};">
+                <div style="width:3px;height:36px;border-radius:2px;flex-shrink:0;background:${r.tipo==="movimiento"?"#AAAAAA":esGasto?"#D94F3D":"#3DAD7F"};${r.enExcel?"opacity:0.4":""}"></div>
                 <div style="flex:1;min-width:0;">
                   <p style="font-size:15px;font-weight:600;color:${r.enExcel?"#aaa":"#1a1a1a"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.enExcel?"text-decoration:line-through":""}">${esc(r.descripcion)}</p>
                   <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
@@ -445,6 +445,7 @@ function render() {
                     ${r.splitwise?`<span style="font-size:11px;font-weight:500;color:#A0862A;background:#FFF3C4;padding:2px 8px;border-radius:20px;">Splitwise</span>`:""}
                     ${r.release?`<span style="font-size:11px;font-weight:500;color:#E8760A;background:#E8760A14;padding:2px 8px;border-radius:20px;">Release</span>`:""}
                   </div>
+                  ${r.tipo==="movimiento"?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#888;background:#88888814;padding:2px 8px;border-radius:20px;">Interno</span></div>`:""}
                   ${r.nota?`<p style="font-size:13px;color:#999;margin-top:6px;line-height:1.45;font-style:italic;">${esc(r.nota)}</p>`:""}
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
