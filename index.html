@@ -442,8 +442,12 @@ function render() {
                   <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
                     <span style="font-size:11px;font-weight:500;color:${r.tipo==="movimiento"?"#aaa":(info.color||"#888")};background:${r.tipo==="movimiento"?"#aaaaaa18":(info.color||"#888")+"14"};padding:2px 8px;border-radius:20px;">${r.cuenta==="otro"&&r.cuentaOtro?r.cuentaOtro:(info.label||"")}</span>
                     <span style="font-size:11px;color:#bbb;">${formatFecha(r.fecha)}</span>
-                    ${r.splitwise?`<span style="font-size:11px;font-weight:500;color:#A0862A;background:#FFF3C4;padding:2px 8px;border-radius:20px;">Splitwise</span>`:""}
-                    ${r.release?`<span style="font-size:11px;font-weight:500;color:#E8760A;background:#E8760A14;padding:2px 8px;border-radius:20px;">Release</span>`:""}
+                  </div>
+                  ${(r.splitwise||r.release)?`<div style="display:flex;align-items:center;gap:6px;margin-top:5px;">
+                    ${r.splitwise?`<span onclick="accionToggleSplitwise(${r.id})" style="cursor:pointer;font-size:11px;font-weight:500;color:${r.splitwiseDone?'#3DAD7F':'#A0862A'};background:${r.splitwiseDone?'#3DAD7F14':'#FFF3C4'};padding:2px 8px;border-radius:20px;text-decoration:${r.splitwiseDone?'line-through':'none'};">${r.splitwiseDone?'✓ Splitwise':'Splitwise'}</span>`:''}
+                    ${r.release?`<span style="font-size:11px;font-weight:500;color:#E8760A;background:#E8760A14;padding:2px 8px;border-radius:20px;">Release</span>`:''}
+                  </div>`:''}
+                  <div style="display:none;">
                   </div>
                   ${r.tipo==="movimiento"?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#888;background:#88888814;padding:2px 8px;border-radius:20px;">Interno</span></div>`:""}
                   ${r.nota?`<p style="font-size:13px;color:#999;margin-top:6px;line-height:1.45;font-style:italic;">${esc(r.nota)}</p>`:""}
@@ -458,7 +462,7 @@ function render() {
                     : `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
                         <button onclick="S.eliminarId=${r.id};render()" style="font-size:16px;color:#ddd;line-height:1;">×</button>
                         <button onclick="accionEditar(${r.id})" style="font-size:11px;color:#bbb;font-weight:500;background:#F0EDE8;border-radius:6px;padding:2px 8px;">editar</button>
-                        <button onclick="accionToggleExcel(${r.id})" style="font-size:11px;font-weight:500;border-radius:6px;padding:2px 8px;${r.enExcel?"color:#3DAD7F;background:#3DAD7F14;":"color:#bbb;background:#F0EDE8;"}">${r.enExcel?"✓ Excel":"Excel"}</button>
+                        ${r.tipo!=="movimiento"?`<button onclick="accionToggleExcel(${r.id})" style="font-size:11px;font-weight:500;border-radius:6px;padding:2px 8px;${r.enExcel?"color:#3DAD7F;background:#3DAD7F14;":"color:#bbb;background:#F0EDE8;"}">${r.enExcel?"✓ Excel":"Excel"}</button>`:""}
                       </div>`}
                 </div>
               </div>`;
@@ -531,6 +535,17 @@ async function accionEliminarRec(id) {
 async function cargarRec() {
   try { S.recordatorios=await dbCargarRec()||[]; render(); } catch(e){ S.recordatorios=[]; render(); }
 }
+async function accionToggleSplitwise(id) {
+  const r = S.registros.find(x => x.id === id);
+  if (!r) return;
+  const nuevoValor = !r.splitwiseDone;
+  try {
+    await xhr("PATCH", API + "?id=eq." + id + "&apikey=" + SUPABASE_KEY, { splitwiseDone: nuevoValor });
+    S.registros = S.registros.map(x => x.id === id ? {...x, splitwiseDone: nuevoValor} : x);
+    render();
+  } catch(e) { alert("Error: " + e.message); }
+}
+
 async function accionToggleExcel(id) {
   const r = S.registros.find(x => x.id === id);
   if (!r) return;
