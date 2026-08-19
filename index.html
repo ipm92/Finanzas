@@ -179,7 +179,7 @@ function formRecVacio() {
   return { tipo:"me_deben", descripcion:"", monto:"", moneda:"COP", fecha_limite:"", nota:"", pagado:false };
 }
 function formVacio(tipo) {
-  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false, categoria:"" };
+  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false, categoria:"", splitwiseTipo:"Coshitas", montoTotalSplit:"" };
 }
 
 // ── Estado ─────────────────────────────────────────────────────────────
@@ -345,7 +345,12 @@ ${dias!==null?`<span style="font-size:11px;font-weight:600;color:${vencido?'#D94
 function render() {
   const { tab, mostrarForm, filtro, eliminarId, form, registros } = S;
   const cuentas = tab==="gasto" ? CUENTAS_GASTO : CUENTAS_INGRESO;
-  const lista = registros.filter(r => (filtro==="todos" || r.tipo===filtro) && (!S.filtroCategoria || r.categoria===S.filtroCategoria));
+  const lista = registros.filter(r => {
+    const tipoOk = filtro==="todos" || r.tipo===filtro || (filtro==="sin-categoria");
+    const sinCatOk = filtro!=="sin-categoria" || !r.categoria || r.categoria==="";
+    const catOk = !S.filtroCategoria || r.categoria===S.filtroCategoria;
+    return tipoOk && sinCatOk && catOk;
+  });
 
   document.getElementById("app").innerHTML = `
   <div style="min-height:100vh;background:#F7F6F3;">
@@ -356,6 +361,7 @@ function render() {
         <p style="font-size:11px;font-weight:500;color:#bbb;letter-spacing:1px;text-transform:uppercase;">Mi registro</p>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
           <h1 style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#1a1a1a;">Finanzas</h1>
+          <button onclick="mostrarExport()" style="height:38px;padding:0 14px;border-radius:20px;background:#F7F6F3;color:#777;font-size:12px;font-weight:500;border:1.5px solid #E8E6E1;margin-right:8px;">↓ CSV</button>
           <button onclick="accionToggleForm()" style="width:38px;height:38px;border-radius:50%;background:${mostrarForm?"#f0ede8":"#1a1a1a"};color:${mostrarForm?"#999":"#fff"};font-size:20px;display:flex;align-items:center;justify-content:center;">
             ${mostrarForm?"×":"+"}
           </button>
@@ -486,7 +492,7 @@ function render() {
       <!-- FILTROS -->
       ${S.seccion==='registros'?`<div style="margin-top:20px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Internos"]].map(([v,l])=>`
+          ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Internos"],["sin-categoria","Sin categoría"]].map(([v,l])=>`
             <button onclick="S.filtro='${v}';render()" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1'};">
               ${l}
             </button>`).join("")}
@@ -635,6 +641,25 @@ async function accionToggleExcel(id) {
   } catch(e) { alert("Error: " + e.message); }
 }
 
+function calcularMiParte() {
+  const raw = String(S.form.montoTotalSplit||"").replace(/\./g,"").replace(/\D/g,"");
+  if (!raw) return;
+  const total = parseFloat(raw);
+  const t = S.form.splitwiseTipo;
+  const div = t==="Coshitas"?2:t==="Familia mitades"?2:t==="Familia cuartos"?4:8;
+  S.form.monto = String(Math.round(total/div));
+  // Update monto input
+  const fm = document.getElementById("f-monto");
+  if (fm) fm.value = Number(S.form.monto).toLocaleString("es-CO");
+  actualizarBtn();
+}
+function onTotalSplitInput(el) {
+  const raw = el.value.replace(/\D/g,"");
+  S.form.montoTotalSplit = raw;
+  el.value = raw ? Number(raw).toLocaleString("es-CO") : "";
+  calcularMiParte();
+}
+
 function getCatList() {
   const tipo = S.form.tipo;
   return tipo === "ingreso" ? CATS_INGRESO : CATS_GASTO;
@@ -688,6 +713,146 @@ function onDescInput(el) {
     }
   }
   actualizarBtn();
+}
+
+
+const CUENTA_LABELS = {
+  "davi-td": "Cta ahorros Davivienda",
+  "davi-tc": "Davi TC",
+  "rappi-tc": "Rappi TC",
+  "nequi": "Nequi",
+  "nubank": "NuBank",
+  "daviplata": "Daviplata",
+  "efectivo": "Efectivo",
+  "fic": "FIC 1 Corredores",
+  "splitwise": "Splitwise",
+  "otro": ""
+};
+const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+function cuentaLabel(r) {
+  if (r.splitwise) {
+    const t = r.splitwiseTipo || "";
+    if (t.startsWith("Coshitas")) return "Splitwise Coshitas";
+    if (t.includes("Familia")) return "Splitwise Familia";
+    return "Splitwise";
+  }
+  if (r.cuenta === "otro" && r.cuentaOtro) {
+    const co = r.cuentaOtro.trim();
+    if (co === "Pibank") return "Pibank";
+    if (co === "RappiCuenta") return "RappiCuenta";
+    if (co === "Bolsillo Rappipay") return "Bolsillo Rappipay";
+    return co;
+  }
+  return CUENTA_LABELS[r.cuenta] || r.cuenta || "";
+}
+
+function notaExport(r) {
+  let nota = r.nota || "";
+  if (r.splitwise) {
+    const st = r.splitwiseTipo || "";
+    const etiq = st.startsWith("Coshitas") ? "Splitwise Coshitas" : st.includes("Familia") ? "Splitwise Familia" : "Splitwise";
+    nota = nota ? etiq + " — " + nota : etiq;
+  }
+  return nota;
+}
+
+function fechaCorta(f) {
+  if (!f) return "";
+  const [y,m,d] = f.split("-");
+  return parseInt(d) + "-" + MESES[parseInt(m)-1];
+}
+
+function generarCSV(registros, titulo) {
+  const header = "Concepto\tValor\tFecha\tCategoria\tCuenta\tNota";
+  const rows = registros.map(r => [
+    (r.descripcion||"").replace(/\t/g," "),
+    r.monto||0,
+    fechaCorta(r.fecha),
+    (r.categoria||"").replace(/\t/g," "),
+    cuentaLabel(r),
+    notaExport(r).replace(/\t/g," ")
+  ].join("\t"));
+  return header + "\n" + rows.join("\n");
+}
+
+function descargarCSV(contenido, nombre) {
+  const blob = new Blob(["\uFEFF" + contenido], {type:"text/tab-separated-values;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nombre; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function mostrarExport() {
+  const ahora = new Date();
+  const mesActual = ahora.getMonth();
+  const anioActual = ahora.getFullYear();
+  
+  // Build modal HTML
+  const mesesOpts = MESES.map((m,i) => 
+    `<option value="${i}" ${i===mesActual?"selected":""}>${m}</option>`
+  ).join("");
+  
+  const modal = document.createElement("div");
+  modal.id = "export-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.15);">
+      <p style="font-size:17px;font-weight:700;color:#1a1a1a;margin-bottom:16px;">Exportar CSV</p>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px;font-weight:500;color:#999;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">Mes</label>
+        <select id="exp-mes" style="width:100%;padding:10px 14px;border:1.5px solid #E8E6E1;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;">${mesesOpts}</select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px;font-weight:500;color:#999;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">Año</label>
+        <input id="exp-anio" type="number" value="${anioActual}" style="width:100%;padding:10px 14px;border:1.5px solid #E8E6E1;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;" />
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11px;font-weight:500;color:#999;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">Tipo</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${["Todos","Gastos","Ingresos"].map(t=>`<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" id="exp-${t.toLowerCase()}" checked style="width:14px;height:14px;"> ${t}</label>`).join("")}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('export-modal').remove()" style="flex:1;padding:12px;border-radius:10px;background:#F7F6F3;color:#888;font-size:14px;font-weight:500;border:none;cursor:pointer;">Cancelar</button>
+        <button onclick="ejecutarExport()" style="flex:2;padding:12px;border-radius:10px;background:#1a1a1a;color:#fff;font-size:14px;font-weight:600;border:none;cursor:pointer;">Exportar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+}
+
+function ejecutarExport() {
+  const mes = parseInt(document.getElementById("exp-mes").value);
+  const anio = parseInt(document.getElementById("exp-anio").value);
+  const incTodos = document.getElementById("exp-todos").checked;
+  const incGastos = document.getElementById("exp-gastos").checked;
+  const incIngresos = document.getElementById("exp-ingresos").checked;
+  
+  const mesStr = String(mes+1).padStart(2,"0");
+  const anioStr = String(anio);
+  
+  const personal = S.registros.filter(r => {
+    if (!r.fecha || !r.fecha.startsWith(anioStr+"-"+mesStr)) return false;
+    if (r.tipo === "movimiento") return false; // no internos
+    if (r.tipo === "gasto" && !r.release && (incTodos||incGastos)) return true;
+    if (r.tipo === "ingreso" && (incTodos||incIngresos)) return true;
+    return false;
+  });
+  
+  const release = S.registros.filter(r => {
+    if (!r.fecha || !r.fecha.startsWith(anioStr+"-"+mesStr)) return false;
+    return r.release === true;
+  });
+  
+  const nomMes = MESES[mes]+anioStr.slice(2);
+  
+  if (personal.length) descargarCSV(generarCSV(personal, "Personal"), `Personal_${nomMes}.tsv`);
+  if (release.length) descargarCSV(generarCSV(release, "Release"), `Release_${nomMes}.tsv`);
+  
+  document.getElementById("export-modal").remove();
+  if (!personal.length && !release.length) alert("No hay registros para ese mes y año.");
 }
 
 function accionSetTab(t) { S.tab=t; S.form=formVacio(t); S.mostrarForm=false; render(); }
@@ -783,6 +948,8 @@ async function accionGuardar() {
     release:     S.form.release || false,
     enExcel:     S.form.enExcel || false,
     categoria:   S.form.categoria || "",
+    splitwiseTipo: S.form.splitwiseTipo || "Coshitas",
+    montoTotalSplit: S.form.montoTotalSplit ? parseFloat(String(S.form.montoTotalSplit).replace(/\./g,"").replace(/\D/g,"")) : null,
   };
 
   try {
@@ -810,6 +977,8 @@ function accionEditar(id) {
     cuentaDestino: r.cuentaDestino || "davi-td",
     enExcel:     r.enExcel || false,
     categoria:   r.categoria || "",
+    splitwiseTipo: r.splitwiseTipo || "Coshitas",
+    montoTotalSplit: r.montoTotalSplit ? String(r.montoTotalSplit) : "",
     cuenta:      r.cuenta || "davi-td",
     fecha:       r.fecha || hoy(),
     moneda:      r.moneda || "COP",
@@ -859,6 +1028,8 @@ async function accionActualizar() {
     release:     S.form.release || false,
     enExcel:     S.form.enExcel || false,
     categoria:   S.form.categoria || "",
+    splitwiseTipo: S.form.splitwiseTipo || "Coshitas",
+    montoTotalSplit: S.form.montoTotalSplit ? parseFloat(String(S.form.montoTotalSplit).replace(/\./g,"").replace(/\D/g,"")) : null,
   };
 
   try {
