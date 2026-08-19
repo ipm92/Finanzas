@@ -179,7 +179,7 @@ function formRecVacio() {
   return { tipo:"me_deben", descripcion:"", monto:"", moneda:"COP", fecha_limite:"", nota:"", pagado:false };
 }
 function formVacio(tipo) {
-  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false, categoria:"", splitwiseTipo:"Coshitas", montoTotalSplit:"" };
+  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false, categoria:"", splitwiseTipo:"Coshitas", montoTotalSplit:"", esInterno:false, esProyectoApto:false };
 }
 
 // ── Estado ─────────────────────────────────────────────────────────────
@@ -479,6 +479,26 @@ function render() {
           <p style="font-size:13px;font-weight:500;color:${form.splitwise?"#A0862A":"#888"};">Poner en Splitwise</p>
         </div>
 
+        <div onclick="syncForm();S.form.esInterno=!S.form.esInterno;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:10px;background:${form.esInterno?"#E3F2FD":"#F7F6F3"};border:1.5px solid ${form.esInterno?"#90CAF9":"#E8E6E1"};">
+          <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.esInterno?"#64B5F6":"#D8D5CE"};position:relative;">
+            <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.esInterno?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
+          </div>
+          <div>
+            <p style="font-size:13px;font-weight:500;color:${form.esInterno?"#1565C0":"#888"};">Movimiento interno</p>
+            <p style="font-size:11px;color:#bbb;margin-top:1px;">Pago TC, traslado entre cuentas. No aparece en reportes.</p>
+          </div>
+        </div>
+
+        <div onclick="syncForm();S.form.esProyectoApto=!S.form.esProyectoApto;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:16px;background:${form.esProyectoApto?"#F3E5F5":"#F7F6F3"};border:1.5px solid ${form.esProyectoApto?"#CE93D8":"#E8E6E1"};">
+          <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.esProyectoApto?"#BA68C8":"#D8D5CE"};position:relative;">
+            <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.esProyectoApto?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
+          </div>
+          <div>
+            <p style="font-size:13px;font-weight:500;color:${form.esProyectoApto?"#6A1B9A":"#888"};">Proyecto Apartamento</p>
+            <p style="font-size:11px;color:#bbb;margin-top:1px;">Cuotas, escrituración, remodelación.</p>
+          </div>
+        </div>
+
         <button id="btn-guardar" onclick="${S.editandoId?'accionActualizar':'accionGuardar'}()" style="width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:600;background:${form.descripcion&&form.monto?"#1a1a1a":"#E8E6E1"};color:${form.descripcion&&form.monto?"#fff":"#aaa"};">
           ${S.editandoId?"Guardar cambios":"Guardar "+tab}
         </button>
@@ -534,6 +554,8 @@ function render() {
                   <div style="display:none;">
                   </div>
                   ${r.tipo==="movimiento"?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#888;background:#88888814;padding:2px 8px;border-radius:20px;">Interno</span></div>`:""}
+                  ${r.esInterno?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#1565C0;background:#E3F2FD;padding:2px 9px;border-radius:20px;">Mvto. Interno</span></div>`:""}
+                  ${r.esProyectoApto?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#6A1B9A;background:#F3E5F5;padding:2px 9px;border-radius:20px;">Apto</span></div>`:""}
                   ${r.nota?`<p style="font-size:13px;color:#999;margin-top:6px;line-height:1.45;font-style:italic;">${esc(r.nota)}</p>`:""}
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
@@ -702,6 +724,8 @@ function seleccionarCat(cat) {
 }
 
 // Auto-suggest on description change
+const REGEX_INTERNO = /pago tc|compra banco davivienda sa|traslado fic|transferencia a titulos|cta ahorros a fic|fic a cta|nequi a rappi|rappi.*nequi|nubank a pibank|constituc.*cdt|redenc.*cdt/i;
+
 function onDescInput(el) {
   S.form.descripcion = el.value;
   if (!S.form.categoria) {
@@ -711,6 +735,11 @@ function onDescInput(el) {
       const ci = document.getElementById("f-cat-input");
       if (ci) ci.value = sugerida;
     }
+  }
+  // Auto-detect esInterno
+  if (REGEX_INTERNO.test(el.value)) {
+    S.form.esInterno = true;
+    render();
   }
   actualizarBtn();
 }
@@ -950,6 +979,8 @@ async function accionGuardar() {
     categoria:   S.form.categoria || "",
     splitwiseTipo: S.form.splitwiseTipo || "Coshitas",
     montoTotalSplit: S.form.montoTotalSplit ? parseFloat(String(S.form.montoTotalSplit).replace(/\./g,"").replace(/\D/g,"")) : null,
+    esInterno:   S.form.esInterno || false,
+    esProyectoApto: S.form.esProyectoApto || false,
   };
 
   try {
@@ -979,6 +1010,8 @@ function accionEditar(id) {
     categoria:   r.categoria || "",
     splitwiseTipo: r.splitwiseTipo || "Coshitas",
     montoTotalSplit: r.montoTotalSplit ? String(r.montoTotalSplit) : "",
+    esInterno:   r.esInterno || false,
+    esProyectoApto: r.esProyectoApto || false,
     cuenta:      r.cuenta || "davi-td",
     fecha:       r.fecha || hoy(),
     moneda:      r.moneda || "COP",
@@ -1030,6 +1063,8 @@ async function accionActualizar() {
     categoria:   S.form.categoria || "",
     splitwiseTipo: S.form.splitwiseTipo || "Coshitas",
     montoTotalSplit: S.form.montoTotalSplit ? parseFloat(String(S.form.montoTotalSplit).replace(/\./g,"").replace(/\D/g,"")) : null,
+    esInterno:   S.form.esInterno || false,
+    esProyectoApto: S.form.esProyectoApto || false,
   };
 
   try {
