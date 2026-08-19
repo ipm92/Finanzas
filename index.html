@@ -346,10 +346,11 @@ function render() {
   const { tab, mostrarForm, filtro, eliminarId, form, registros } = S;
   const cuentas = tab==="gasto" ? CUENTAS_GASTO : CUENTAS_INGRESO;
   const lista = registros.filter(r => {
-    const tipoOk = filtro==="todos" || r.tipo===filtro || (filtro==="sin-categoria");
-    const sinCatOk = filtro!=="sin-categoria" || !r.categoria || r.categoria==="";
-    const catOk = !S.filtroCategoria || r.categoria===S.filtroCategoria;
-    return tipoOk && sinCatOk && catOk;
+    if (filtro === "sin-categoria") return !r.categoria || r.categoria === "";
+    if (filtro === "sw-sin-tipo") return r.splitwise && (!r.splitwiseTipo || r.splitwiseTipo === "Coshitas" && !r.montoTotalSplit);
+    const tipoOk = filtro === "todos" || r.tipo === filtro;
+    const catOk = !S.filtroCategoria || r.categoria === S.filtroCategoria;
+    return tipoOk && catOk;
   });
 
   document.getElementById("app").innerHTML = `
@@ -512,7 +513,7 @@ function render() {
       <!-- FILTROS -->
       ${S.seccion==='registros'?`<div style="margin-top:20px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Internos"],["sin-categoria","Sin categoría"]].map(([v,l])=>`
+          ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Internos"],["sin-categoria","Sin categoría"],["sw-sin-tipo","SW sin tipo"]].map(([v,l])=>`
             <button onclick="S.filtro='${v}';render()" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1'};">
               ${l}
             </button>`).join("")}
