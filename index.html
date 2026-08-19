@@ -237,8 +237,8 @@ function renderRecordatorios() {
       <div style="margin-bottom:14px;">
         <label style="${LBL}">Tipo</label>
         <div style="display:flex;gap:8px;">
-          <button onclick="syncFormRec();S.formRec.tipo='me_deben';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${formRec.tipo==='me_deben'?'#3DAD7F14':'#F7F6F3'};color:${formRec.tipo==='me_deben'?'#3DAD7F':'#777'};border:1.5px solid ${formRec.tipo==='me_deben'?'#3DAD7F55':'#E8E6E1'};">Me deben</button>
-          <button onclick="syncFormRec();S.formRec.tipo='debo_pagar';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${formRec.tipo==='debo_pagar'?'#D94F3D14':'#F7F6F3'};color:${formRec.tipo==='debo_pagar'?'#D94F3D':'#777'};border:1.5px solid ${formRec.tipo==='debo_pagar'?'#D94F3D55':'#E8E6E1'};">Debo pagar</button>
+          <button onclick="syncFormRec();S.formRec.tipo='me_deben';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${formRec.tipo==='me_deben'?'#3DAD7F14':'#F7F6F3'};color:${formRec.tipo==='me_deben'?'#3DAD7F':'#777'};border:1.5px solid ${formRec.tipo==='me_deben'?'#3DAD7F55':"#E8E6E1"};">Me deben</button>
+          <button onclick="syncFormRec();S.formRec.tipo='debo_pagar';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${formRec.tipo==='debo_pagar'?'#D94F3D14':'#F7F6F3'};color:${formRec.tipo==='debo_pagar'?'#D94F3D':'#777'};border:1.5px solid ${formRec.tipo==='debo_pagar'?'#D94F3D55':"#E8E6E1"};">Debo pagar</button>
         </div>
       </div>
       <div style="margin-bottom:14px;">
@@ -261,8 +261,8 @@ function renderRecordatorios() {
           <label style="${LBL}">Fecha límite</label>
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;gap:6px;">
-              <button onclick="syncFormRec();S.formRec.fecha_limite='';render()" style="flex:1;padding:8px 0;border-radius:8px;font-size:12px;font-weight:500;background:${!formRec.fecha_limite?'#1a1a1a':'#F7F6F3'};color:${!formRec.fecha_limite?'#fff':'#777'};border:1.5px solid ${!formRec.fecha_limite?'#1a1a1a':'#E8E6E1'};">Sin fecha</button>
-              <button onclick="syncFormRec();S.formRec.fecha_limite=S.formRec.fecha_limite||hoy();render()" style="flex:1;padding:8px 0;border-radius:8px;font-size:12px;font-weight:500;background:${formRec.fecha_limite?'#1a1a1a':'#F7F6F3'};color:${formRec.fecha_limite?'#fff':'#777'};border:1.5px solid ${formRec.fecha_limite?'#1a1a1a':'#E8E6E1'};">Con fecha</button>
+              <button onclick="syncFormRec();S.formRec.fecha_limite='';render()" style="flex:1;padding:8px 0;border-radius:8px;font-size:12px;font-weight:500;background:${!formRec.fecha_limite?'#1a1a1a':'#F7F6F3'};color:${!formRec.fecha_limite?'#fff':'#777'};border:1.5px solid ${!formRec.fecha_limite?'#1a1a1a':"#E8E6E1"};">Sin fecha</button>
+              <button onclick="syncFormRec();S.formRec.fecha_limite=S.formRec.fecha_limite||hoy();render()" style="flex:1;padding:8px 0;border-radius:8px;font-size:12px;font-weight:500;background:${formRec.fecha_limite?'#1a1a1a':'#F7F6F3'};color:${formRec.fecha_limite?'#fff':'#777'};border:1.5px solid ${formRec.fecha_limite?'#1a1a1a':"#E8E6E1"};">Con fecha</button>
             </div>
             ${formRec.fecha_limite?`<input type="date" value="${formRec.fecha_limite}" onchange="S.formRec.fecha_limite=this.value" style="${INP2}outline:none;color-scheme:light;" />`:''}
           </div>
@@ -271,7 +271,7 @@ function renderRecordatorios() {
       <div style="margin-bottom:14px;">
         <label style="${LBL}">Moneda</label>
         <div style="display:flex;gap:6px;">
-          ${MONEDAS.map(m=>`<button onclick="syncFormRec();S.formRec.moneda='${m.id}';render()" style="flex:1;padding:9px 0;border-radius:10px;font-size:13px;font-weight:500;background:${formRec.moneda===m.id?'#1a1a1a':'#F7F6F3'};color:${formRec.moneda===m.id?'#fff':'#777'};border:1.5px solid ${formRec.moneda===m.id?'#1a1a1a':'#E8E6E1'};">${m.label}</button>`).join("")}
+          ${MONEDAS.map(m=>`<button onclick="syncFormRec();S.formRec.moneda='${m.id}';render()" style="flex:1;padding:9px 0;border-radius:10px;font-size:13px;font-weight:500;background:${formRec.moneda===m.id?'#1a1a1a':'#F7F6F3'};color:${formRec.moneda===m.id?'#fff':'#777'};border:1.5px solid ${formRec.moneda===m.id?'#1a1a1a':"#E8E6E1"};">${m.label}</button>`).join("")}
         </div>
       </div>
       <div style="display:flex;gap:8px;">
@@ -369,8 +369,8 @@ function render() {
         </div>
         <!-- Nav principal -->
         <div style="display:flex;gap:6px;margin-top:14px;">
-          <button onclick="S.seccion='registros';S.formRec=null;render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='registros'?'#1a1a1a':'transparent'};color:${S.seccion==='registros'?'#fff':'#999'};border:1.5px solid ${S.seccion==='registros'?'#1a1a1a':'#E8E6E1'};">Registros</button>
-          <button onclick="S.seccion='recordatorios';S.mostrarForm=false;if(!S.recordatorios.length)cargarRec();render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='recordatorios'?'#1a1a1a':'transparent'};color:${S.seccion==='recordatorios'?'#fff':'#999'};border:1.5px solid ${S.seccion==='recordatorios'?'#1a1a1a':'#E8E6E1'};">Recordatorios</button>
+          <button onclick="S.seccion='registros';S.formRec=null;render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='registros'?'#1a1a1a':'transparent'};color:${S.seccion==='registros'?'#fff':'#999'};border:1.5px solid ${S.seccion==='registros'?'#1a1a1a':"#E8E6E1"};">Registros</button>
+          <button onclick="S.seccion='recordatorios';S.mostrarForm=false;if(!S.recordatorios.length)cargarRec();render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='recordatorios'?'#1a1a1a':'transparent'};color:${S.seccion==='recordatorios'?'#fff':'#999'};border:1.5px solid ${S.seccion==='recordatorios'?'#1a1a1a':"#E8E6E1"};">Recordatorios</button>
         </div>
 
       </div>
@@ -383,9 +383,9 @@ function render() {
       <div class="fade" style="background:#fff;border:1px solid #E8E6E1;border-radius:16px;padding:20px;margin-top:16px;">
 
         <div style="display:flex;gap:8px;margin-bottom:16px;">
-          <button onclick="syncForm();S.form.tipo='gasto';S.tab='gasto';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='gasto'?'#D94F3D14':'#F7F6F3'};color:${form.tipo==='gasto'?'#D94F3D':'#777'};border:1.5px solid ${form.tipo==='gasto'?'#D94F3D55':'#E8E6E1'};">Gasto</button>
-          <button onclick="syncForm();S.form.tipo='ingreso';S.tab='ingreso';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='ingreso'?'#3DAD7F14':'#F7F6F3'};color:${form.tipo==='ingreso'?'#3DAD7F':'#777'};border:1.5px solid ${form.tipo==='ingreso'?'#3DAD7F55':'#E8E6E1'};">Ingreso</button>
-          <button onclick="syncForm();S.form.tipo='movimiento';S.tab='movimiento';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='movimiento'?'#7B4FBF14':'#F7F6F3'};color:${form.tipo==='movimiento'?'#7B4FBF':'#777'};border:1.5px solid ${form.tipo==='movimiento'?'#7B4FBF55':'#E8E6E1'};">Interno</button>
+          <button onclick="syncForm();S.form.tipo='gasto';S.tab='gasto';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='gasto'?'#D94F3D14':'#F7F6F3'};color:${form.tipo==='gasto'?'#D94F3D':'#777'};border:1.5px solid ${form.tipo==='gasto'?'#D94F3D55':"#E8E6E1"};">Gasto</button>
+          <button onclick="syncForm();S.form.tipo='ingreso';S.tab='ingreso';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='ingreso'?'#3DAD7F14':'#F7F6F3'};color:${form.tipo==='ingreso'?'#3DAD7F':'#777'};border:1.5px solid ${form.tipo==='ingreso'?'#3DAD7F55':"#E8E6E1"};">Ingreso</button>
+          <button onclick="syncForm();S.form.tipo='movimiento';S.tab='movimiento';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='movimiento'?'#7B4FBF14':'#F7F6F3'};color:${form.tipo==='movimiento'?'#7B4FBF':'#777'};border:1.5px solid ${form.tipo==='movimiento'?'#7B4FBF55':"#E8E6E1"};">Interno</button>
         </div>
 
         <div style="margin-bottom:16px;">
@@ -454,7 +454,7 @@ function render() {
           <label style="${LBL}">Cuenta destino</label>
           <div style="display:flex;flex-direction:column;gap:6px;">
             ${[...CUENTAS_GASTO, ...CUENTAS_INGRESO.filter(x=>!CUENTAS_GASTO.find(g=>g.id===x.id))].map(c=>`
-              <button onclick="syncForm();S.form.cuentaDestino='${c.id}';render()" style="padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:left;background:${form.cuentaDestino===c.id?c.color+'14':'#F7F6F3'};color:${form.cuentaDestino===c.id?c.color:'#555'};border:1.5px solid ${form.cuentaDestino===c.id?c.color+'55':'#E8E6E1'};">
+              <button onclick="syncForm();S.form.cuentaDestino='${c.id}';render()" style="padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:left;background:${form.cuentaDestino===c.id?c.color+'14':'#F7F6F3'};color:${form.cuentaDestino===c.id?c.color:'#555'};border:1.5px solid ${form.cuentaDestino===c.id?c.color+'55':"#E8E6E1"};">
                 ${c.label}
               </button>`).join("")}
           </div>
@@ -514,7 +514,7 @@ function render() {
       ${S.seccion==='registros'?`<div style="margin-top:20px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Internos"],["sin-categoria","Sin categoría"],["sw-sin-tipo","SW sin tipo"]].map(([v,l])=>`
-            <button onclick="S.filtro='${v}';render()" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1'};">
+            <button onclick="S.filtro='${v}';render()" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1"};">
               ${l}
             </button>`).join("")}
         </div>
@@ -522,8 +522,8 @@ function render() {
           const cats = [...new Set(S.registros.filter(r=>filtro==="todos"||r.tipo===filtro).map(r=>r.categoria).filter(Boolean))].sort();
           if (!cats.length) return "";
           return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid #E8E6E1;">
-            <button onclick="S.filtroCategoria='';render()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;background:${S.filtroCategoria===''?"#1a1a1a":"transparent"};color:${S.filtroCategoria===''?"#fff":"#999"};border:1.5px solid ${S.filtroCategoria===''?"#1a1a1a":"#E8E6E1'};">Todas</button>
-            ${cats.map(cat=>`<button onclick="S.filtroCategoria='${cat.replace(/'/g,"\\'")}';render()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;background:${S.filtroCategoria===cat?"#1a1a1a":"transparent"};color:${S.filtroCategoria===cat?"#fff":"#999"};border:1.5px solid ${S.filtroCategoria===cat?"#1a1a1a":"#E8E6E1'};">${cat}</button>`).join("")}
+            <button onclick="S.filtroCategoria='';render()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;background:${S.filtroCategoria===''?"#1a1a1a":"transparent"};color:${S.filtroCategoria===''?"#fff":"#999"};border:1.5px solid ${S.filtroCategoria===''?"#1a1a1a":"#E8E6E1"};">Todas</button>
+            ${cats.map(cat=>`<button onclick="S.filtroCategoria='${cat.replace(/'/g,"\\'")}';render()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;background:${S.filtroCategoria===cat?"#1a1a1a":"transparent"};color:${S.filtroCategoria===cat?"#fff":"#999"};border:1.5px solid ${S.filtroCategoria===cat?"#1a1a1a":"#E8E6E1"};">${cat}</button>`).join("")}
           </div>`;
         })()}
       </div>
