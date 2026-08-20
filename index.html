@@ -760,12 +760,27 @@ const CUENTA_LABELS = {
 };
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
+function splitDivisor(tipo) {
+  const t = (tipo||"").toLowerCase();
+  if (t.includes("cuartos") && t.includes("coshitas")) return 8;
+  if (t.includes("cuartos")) return 4;
+  if (t.includes("mitades")) return 2;
+  if (t.includes("coshitas")) return 2;
+  return 1; // unknown type: export as-is
+}
+
+function miParteSplit(r) {
+  // If montoTotalSplit is set, use it; otherwise monto is the total
+  const total = r.montoTotalSplit || r.monto;
+  const div = splitDivisor(r.splitwiseTipo);
+  return Math.round(total / div);
+}
+
 function cuentaLabel(r) {
   if (r.splitwise) {
-    const t = r.splitwiseTipo || "";
-    if (t.startsWith("Coshitas")) return "Splitwise Coshitas";
-    if (t.includes("Familia")) return "Splitwise Familia";
-    return "Splitwise";
+    const t = (r.splitwiseTipo || "").toLowerCase();
+    if (t.includes("familia")) return "Splitwise Familia";
+    return "Splitwise Coshitas";
   }
   if (r.cuenta === "otro" && r.cuentaOtro) {
     const co = r.cuentaOtro.trim();
@@ -780,9 +795,12 @@ function cuentaLabel(r) {
 function notaExport(r) {
   let nota = r.nota || "";
   if (r.splitwise) {
-    const st = r.splitwiseTipo || "";
-    const etiq = st.startsWith("Coshitas") ? "Splitwise Coshitas" : st.includes("Familia") ? "Splitwise Familia" : "Splitwise";
-    nota = nota ? etiq + " — " + nota : etiq;
+    const t = (r.splitwiseTipo || "").toLowerCase();
+    const etiq = t.includes("familia") ? "Splitwise Familia" : "Splitwise Coshitas";
+    const div = splitDivisor(r.splitwiseTipo);
+    const total = r.montoTotalSplit || r.monto;
+    const detalle = `${etiq} (${total.toLocaleString("es-CO")} ÷ ${div})`;
+    nota = nota ? detalle + " — " + nota : detalle;
   }
   return nota;
 }
@@ -795,14 +813,17 @@ function fechaCorta(f) {
 
 function generarCSV(registros, titulo) {
   const header = "Concepto\tValor\tFecha\tCategoria\tCuenta\tNota";
-  const rows = registros.map(r => [
-    (r.descripcion||"").replace(/\t/g," "),
-    r.monto||0,
-    fechaCorta(r.fecha),
-    (r.categoria||"").replace(/\t/g," "),
-    cuentaLabel(r),
-    notaExport(r).replace(/\t/g," ")
-  ].join("\t"));
+  const rows = registros.map(r => {
+    const valor = r.splitwise ? miParteSplit(r) : (r.monto||0);
+    return [
+      (r.descripcion||"").replace(/\t/g," "),
+      valor,
+      fechaCorta(r.fecha),
+      (r.categoria||"").replace(/\t/g," "),
+      cuentaLabel(r),
+      notaExport(r).replace(/\t/g," ")
+    ].join("\t");
+  });
   return header + "\n" + rows.join("\n");
 }
 
