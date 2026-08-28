@@ -813,15 +813,18 @@ function fechaCorta(f) {
 
 function generarCSV(registros, titulo) {
   const header = "Concepto\tValor\tFecha\tCategoria\tCuenta\tNota";
+  function sanCell(s) {
+    return String(s||"").replace(/[\r\n]+/g," · ").replace(/\t/g," ").trim();
+  }
   const rows = registros.map(r => {
     const valor = r.splitwise ? miParteSplit(r) : (r.monto||0);
     return [
-      (r.descripcion||"").replace(/\t/g," "),
+      sanCell(r.descripcion),
       valor,
       fechaCorta(r.fecha),
-      (r.categoria||"").replace(/\t/g," "),
-      cuentaLabel(r),
-      notaExport(r).replace(/\t/g," ")
+      sanCell(r.categoria),
+      sanCell(cuentaLabel(r)),
+      sanCell(notaExport(r))
     ].join("\t");
   });
   return header + "\n" + rows.join("\n");
