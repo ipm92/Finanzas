@@ -811,24 +811,7 @@ function fechaCorta(f) {
   return parseInt(d) + "-" + MESES[parseInt(m)-1];
 }
 
-function generarCSV(registros, titulo) {
-  const header = "Concepto\tValor\tFecha\tCategoria\tCuenta\tNota";
-  function sanCell(s) {
-    return String(s||"").replace(/[\r\n]+/g," · ").replace(/\t/g," ").trim();
-  }
-  const rows = registros.map(r => {
-    const valor = r.splitwise ? miParteSplit(r) : (r.monto||0);
-    return [
-      sanCell(r.descripcion),
-      valor,
-      fechaCorta(r.fecha),
-      sanCell(r.categoria),
-      sanCell(cuentaLabel(r)),
-      sanCell(notaExport(r))
-    ].join("\t");
-  });
-  return header + "\n" + rows.join("\n");
-}
+// generarCSV replaced by generarCSVEgresos and generarCSVIngresos
 
 function descargarCSV(contenido, nombre) {
   const blob = new Blob(["\uFEFF" + contenido], {type:"text/tab-separated-values;charset=utf-8"});
@@ -877,36 +860,46 @@ function mostrarExport() {
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
 }
 
+function generarCSVEgresos(registros) {
+  function sanCell(s) { return String(s||"").replace(/[
+]+/g," · ").replace(/	/g," ").trim(); }
+  const header = "Concepto	Valor	Fecha	Categoria	Cuenta	Nota";
+  const rows = registros.map(r => {
+    const valor = r.splitwise ? miParteSplit(r) : (r.monto||0);
+    return [sanCell(r.descripcion), valor, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r)), sanCell(notaExport(r))].join("	");
+  });
+  return header + "
+" + rows.join("
+");
+}
+
+function generarCSVIngresos(registros) {
+  function sanCell(s) { return String(s||"").replace(/[
+]+/g," · ").replace(/	/g," ").trim(); }
+  const header = "Concepto	Valor	Fecha	Categoria	Cuenta";
+  const rows = registros.map(r => [sanCell(r.descripcion), r.monto||0, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r))].join("	"));
+  return header + "
+" + rows.join("
+");
+}
+
 function ejecutarExport() {
   const mes = parseInt(document.getElementById("exp-mes").value);
   const anio = parseInt(document.getElementById("exp-anio").value);
-  const incTodos = document.getElementById("exp-todos").checked;
-  const incGastos = document.getElementById("exp-gastos").checked;
-  const incIngresos = document.getElementById("exp-ingresos").checked;
-  
   const mesStr = String(mes+1).padStart(2,"0");
   const anioStr = String(anio);
-  
-  const personal = S.registros.filter(r => {
-    if (!r.fecha || !r.fecha.startsWith(anioStr+"-"+mesStr)) return false;
-    if (r.tipo === "movimiento") return false; // no internos
-    if (r.tipo === "gasto" && !r.release && (incTodos||incGastos)) return true;
-    if (r.tipo === "ingreso" && (incTodos||incIngresos)) return true;
-    return false;
-  });
-  
-  const release = S.registros.filter(r => {
-    if (!r.fecha || !r.fecha.startsWith(anioStr+"-"+mesStr)) return false;
-    return r.release === true;
-  });
-  
   const nomMes = MESES[mes]+anioStr.slice(2);
-  
-  if (personal.length) descargarCSV(generarCSV(personal, "Personal"), `Personal_${nomMes}.tsv`);
-  if (release.length) descargarCSV(generarCSV(release, "Release"), `Release_${nomMes}.tsv`);
-  
+  const enMes = r => r.fecha && r.fecha.startsWith(anioStr+"-"+mesStr);
+  const esPersonal = r => !r.esInterno && !r.release && r.tipo !== "movimiento";
+  const egresos  = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "gasto");
+  const ingresos = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "ingreso");
+  const release  = S.registros.filter(r => enMes(r) && r.release === true);
+  let n = 0;
+  if (egresos.length)  { descargarCSV(generarCSVEgresos(egresos),   `${nomMes}_egresos.tsv`);  n++; }
+  if (ingresos.length) { descargarCSV(generarCSVIngresos(ingresos), `${nomMes}_ingresos.tsv`); n++; }
+  if (release.length)  { descargarCSV(generarCSVEgresos(release),   `${nomMes}_release.tsv`);  n++; }
   document.getElementById("export-modal").remove();
-  if (!personal.length && !release.length) alert("No hay registros para ese mes y año.");
+  if (!n) alert("No hay registros para ese mes y año.");
 }
 
 function accionSetTab(t) { S.tab=t; S.form=formVacio(t); S.mostrarForm=false; render(); }
