@@ -861,26 +861,20 @@ function mostrarExport() {
 }
 
 function generarCSVEgresos(registros) {
-  function sanCell(s) { return String(s||"").replace(/[
-]+/g," · ").replace(/	/g," ").trim(); }
-  const header = "Concepto	Valor	Fecha	Categoria	Cuenta	Nota";
+  function sanCell(s) { return String(s||"").replace(/[\r\n]+/g," · ").replace(/\t/g," ").trim(); }
+  const header = "Concepto\tValor\tFecha\tCategoria\tCuenta\tNota";
   const rows = registros.map(r => {
     const valor = r.splitwise ? miParteSplit(r) : (r.monto||0);
-    return [sanCell(r.descripcion), valor, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r)), sanCell(notaExport(r))].join("	");
+    return [sanCell(r.descripcion), valor, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r)), sanCell(notaExport(r))].join("\t");
   });
-  return header + "
-" + rows.join("
-");
+  return header + "\n" + rows.join("\n");
 }
 
 function generarCSVIngresos(registros) {
-  function sanCell(s) { return String(s||"").replace(/[
-]+/g," · ").replace(/	/g," ").trim(); }
-  const header = "Concepto	Valor	Fecha	Categoria	Cuenta";
-  const rows = registros.map(r => [sanCell(r.descripcion), r.monto||0, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r))].join("	"));
-  return header + "
-" + rows.join("
-");
+  function sanCell(s) { return String(s||"").replace(/[\r\n]+/g," · ").replace(/\t/g," ").trim(); }
+  const header = "Concepto\tValor\tFecha\tCategoria\tCuenta";
+  const rows = registros.map(r => [sanCell(r.descripcion), r.monto||0, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r))].join("\t"));
+  return header + "\n" + rows.join("\n");
 }
 
 function ejecutarExport() {
