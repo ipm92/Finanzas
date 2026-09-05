@@ -887,9 +887,10 @@ function ejecutarExport() {
   const nomMes = MESES[mes]+anioStr.slice(2);
   const enMes = r => r.fecha && r.fecha.startsWith(anioStr+"-"+mesStr);
   const esPersonal = r => !r.esInterno && !r.release && r.tipo !== "movimiento";
-  const egresos  = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "gasto");
-  const ingresos = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "ingreso");
-  const release  = S.registros.filter(r => enMes(r) && r.release === true);
+  const porFecha = (a,b) => (a.fecha||"").localeCompare(b.fecha||"");
+  const egresos  = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "gasto").sort(porFecha);
+  const ingresos = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "ingreso").sort(porFecha);
+  const release  = S.registros.filter(r => enMes(r) && r.release === true).sort(porFecha);
   let n = 0;
   if (egresos.length)  { descargarCSV(generarCSVEgresos(egresos),   `${nomMes}_egresos.tsv`);  n++; }
   if (ingresos.length) { descargarCSV(generarCSVIngresos(ingresos), `${nomMes}_ingresos.tsv`); n++; }
