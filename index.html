@@ -986,13 +986,14 @@ function generarCSVSplitwiseConsolidado(registros) {
   const header = "Grupo\tFecha\tDescripción\tMonto Total\tPagué yo?\tDistribución\tMi parte";
   const rows = registros.map(r => {
     const grupo = r.splitCustom ? "Custom" : (r.splitwiseTipo||"");
-    // montoTotalSplit = total if set; else monto is already "mi parte", reconstruct total
+    // r.monto is always the TOTAL (not mi parte)
+    const montoTotal = convertirCOP(r.monto, r.moneda);
     const div = r.splitCustom ? 1 : splitDivisor(r.splitwiseTipo);
-    const rawTotal = r.montoTotalSplit ? r.montoTotalSplit : (r.monto * div);
-    const montoTotal = convertirCOP(rawTotal, r.moneda);
     const pague = quienPago(r.nota);
     const dist = sanCell(distribucionTexto(r));
-    const miParte = miParteSW(r, montoTotal);
+    const miParte = r.splitCustom
+      ? (typeof r.splitCustom === "string" ? JSON.parse(r.splitCustom) : r.splitCustom)["Isa"] || 0
+      : Math.round(montoTotal / div);
     return [grupo, fechaCorta(r.fecha), sanCell(r.descripcion), montoTotal, pague, dist, miParte].join("\t");
   });
   return header + "\n" + rows.join("\n");
