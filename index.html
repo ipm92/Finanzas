@@ -748,6 +748,25 @@ function onDescInput(el) {
 }
 
 
+const TRM_USD_COP = 3236.66;
+const EUR_USD   = 1.10;
+const GBP_USD   = 1.27;
+
+function convertirCOP(monto, moneda) {
+  if (!monto) return 0;
+  const m = parseFloat(monto);
+  if (moneda === 'USD') return Math.round(m * TRM_USD_COP);
+  if (moneda === 'EUR') return Math.round(m * EUR_USD * TRM_USD_COP);
+  if (moneda === 'GBP') return Math.round(m * GBP_USD * TRM_USD_COP);
+  return Math.round(m);
+}
+
+function prefijoCOP(monto, moneda) {
+  if (!moneda || moneda === 'COP') return '';
+  const tasas = { USD: `TRM ${TRM_USD_COP}`, EUR: `EUR→USD ${EUR_USD} × TRM ${TRM_USD_COP}`, GBP: `GBP→USD ${GBP_USD} × TRM ${TRM_USD_COP}` };
+  return `[${moneda} ${monto} @ ${tasas[moneda]||moneda}] `;
+}
+
 const CUENTA_LABELS = {
   "davi-td": "Cta ahorros Davivienda",
   "davi-tc": "Davi TC",
@@ -865,15 +884,31 @@ function mostrarExport() {
 function generarCSVEgresos(registros) {
     function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
   const rows = registros.map(r => {
-    const valor = r.splitwise ? miParteSplit(r) : (r.monto||0);
-    return [sanCell(r.descripcion), valor, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r)), sanCell(notaExport(r))].join("\t");
+    // 1. Convert to COP first
+    const montoCOP = convertirCOP(r.monto, r.moneda);
+    // 2. Then apply splitwise division
+    let valor;
+    if (r.splitwise) {
+      const div = splitDivisor(r.splitwiseTipo);
+      valor = Math.round(montoCOP / div);
+    } else {
+      valor = montoCOP;
+    }
+    // 3. Build nota with currency prefix for traceability
+    const prefijo = prefijoCOP(r.monto, r.moneda);
+    const notaBase = notaExport(r);
+    const notaFinal = prefijo ? prefijo + (notaBase ? '— ' + notaBase : '') : notaBase;
+    return [sanCell(r.descripcion), valor, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r)), sanCell(notaFinal)].join("\t");
   });
   return rows.join("\n");
 }
 
 function generarCSVIngresos(registros) {
     function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
-  const rows = registros.map(r => [sanCell(r.descripcion), r.monto||0, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r))].join("\t"));
+  const rows = registros.map(r => {
+    const montoCOP = convertirCOP(r.monto, r.moneda);
+    return [sanCell(r.descripcion), montoCOP, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r))].join("\t");
+  });
   return rows.join("\n");
 }
 
