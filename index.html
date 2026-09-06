@@ -181,7 +181,7 @@ function formRecVacio() {
   return { tipo:"me_deben", descripcion:"", monto:"", moneda:"COP", fecha_limite:"", nota:"", pagado:false };
 }
 function formVacio(tipo) {
-  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false, categoria:"", splitwiseTipo:"Coshitas", montoTotalSplit:"", esInterno:false, esProyectoApto:false, esTrimestral:false };
+  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false, categoria:"", splitwiseTipo:"Coshitas", montoTotalSplit:"", splitCustom:null, esInterno:false, esProyectoApto:false, esTrimestral:false };
 }
 
 // ── Estado ─────────────────────────────────────────────────────────────
@@ -696,6 +696,25 @@ function onTotalSplitInput(el) {
   calcularMiParte();
 }
 
+
+function setCustomSplit(persona, rawVal) {
+  const num = parseFloat(rawVal.replace(/\./g,"").replace(/\D/g,"")) || 0;
+  if (!S.form.splitCustom) S.form.splitCustom = {};
+  if (num) S.form.splitCustom[persona] = num;
+  else delete S.form.splitCustom[persona];
+  // Update monto = Isa's part
+  if (S.form.splitCustom["Isa"]) {
+    S.form.monto = String(S.form.splitCustom["Isa"]);
+    const fm = document.getElementById("f-monto");
+    if (fm) fm.value = Number(S.form.splitCustom["Isa"]).toLocaleString("es-CO");
+  }
+  // Update total display without full re-render
+  const totalEl = document.querySelector("#custom-split-table + p");
+  const total = Object.values(S.form.splitCustom||{}).reduce((a,b)=>a+(parseFloat(b)||0),0);
+  if (totalEl) totalEl.textContent = "Total asignado: $" + total.toLocaleString("es-CO");
+  actualizarBtn();
+}
+
 function getCatList() {
   const tipo = S.form.tipo;
   return tipo === "ingreso" ? CATS_INGRESO : CATS_GASTO;
@@ -945,6 +964,36 @@ function distribucionLabel(tipo) {
   return "50/50 Arturo"; // Coshitas
 }
 
+function distribucionTexto(r) {
+  if (r.splitCustom) {
+    const sc = typeof r.splitCustom === "string" ? JSON.parse(r.splitCustom) : r.splitCustom;
+    return Object.entries(sc).map(([k,v])=>`${k}: $${Number(v).toLocaleString("es-CO")}`).join(", ");
+  }
+  return distribucionLabel(r.splitwiseTipo);
+}
+
+function miParteSW(r, montoCOP) {
+  if (r.splitCustom) {
+    const sc = typeof r.splitCustom === "string" ? JSON.parse(r.splitCustom) : r.splitCustom;
+    return sc["Isa"] || 0;
+  }
+  return Math.round(montoCOP / splitDivisor(r.splitwiseTipo));
+}
+
+function generarCSVSplitwiseConsolidado(registros) {
+  function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
+  const header = "Grupo\tFecha\tDescripción\tMonto Total\tPagué yo?\tDistribución\tMi parte";
+  const rows = registros.map(r => {
+    const grupo = r.splitCustom ? "Custom" : (r.splitwiseTipo||"");
+    const montoTotal = convertirCOP(r.montoTotalSplit || r.monto, r.moneda);
+    const pague = quienPago(r.nota) === "Yo" ? "Sí" : "No";
+    const dist = sanCell(distribucionTexto(r));
+    const miParte = miParteSW(r, montoTotal);
+    return [grupo, fechaCorta(r.fecha), sanCell(r.descripcion), montoTotal, pague, dist, miParte].join("\t");
+  });
+  return header + "\n" + rows.join("\n");
+}
+
 function generarCSVSplitwise(registros, tipo) {
   function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
   const div = tipo.toLowerCase().includes("cuartos") && tipo.toLowerCase().includes("coshitas") ? 8
@@ -1008,23 +1057,19 @@ function ejecutarExport() {
   if (egresos.length)  { descargarCSV(generarCSVEgresos(egresos),   `${nomMes}_egresos.tsv`);  n++; }
   if (ingresos.length) { descargarCSV(generarCSVIngresos(ingresos), `${nomMes}_ingresos.tsv`); n++; }
   if (release.length)  { descargarCSV(generarCSVEgresos(release),   `${nomMes}_release.tsv`);  n++; }
-  // Splitwise TSVs
-  const swTipos = [
-    ["Coshitas",                  "splitwise_coshitas"],
-    ["Familia mitades",           "splitwise_familia_mitades"],
-    ["Familia cuartos",           "splitwise_familia_cuartos"],
-    ["Familia cuartos + Coshitas","splitwise_familia_cuartos_coshitas"],
-  ];
-  for (const [tipo, slug] of swTipos) {
-    const movs = S.registros.filter(r =>
-      enMes(r) &&
-      r.splitwise === true &&
-      (r.splitwiseTipo||"").toLowerCase() === tipo.toLowerCase()
-    ).sort(porFecha);
-    if (movs.length) {
-      descargarCSV(generarCSVSplitwise(movs, tipo), `${nomMes}_${slug}.tsv`);
-      n++;
-    }
+  // Splitwise TSV consolidado
+  const swMovs = S.registros.filter(r => enMes(r) && r.splitwise === true);
+  if (swMovs.length) {
+    const tipoOrder = ["Coshitas","Familia mitades","Familia cuartos","Familia cuartos + Coshitas","Custom"];
+    const swOrdenado = [...swMovs].sort((a,b) => {
+      const ta = a.splitCustom ? "Custom" : (a.splitwiseTipo||"");
+      const tb = b.splitCustom ? "Custom" : (b.splitwiseTipo||"");
+      const ia = tipoOrder.indexOf(ta), ib = tipoOrder.indexOf(tb);
+      if (ia !== ib) return ia - ib;
+      return (a.fecha||"").localeCompare(b.fecha||"");
+    });
+    descargarCSV(generarCSVSplitwiseConsolidado(swOrdenado), `${nomMes}_splitwise.tsv`);
+    n++;
   }
 
   document.getElementById("export-modal").remove();
@@ -1158,6 +1203,7 @@ function accionEditar(id) {
     categoria:   r.categoria || "",
     splitwiseTipo: r.splitwiseTipo || "Coshitas",
     montoTotalSplit: r.montoTotalSplit ? String(r.montoTotalSplit) : "",
+    splitCustom: r.splitCustom ? (typeof r.splitCustom === "string" ? JSON.parse(r.splitCustom) : r.splitCustom) : null,
     esInterno:   r.esInterno || false,
     esProyectoApto: r.esProyectoApto || false,
     esTrimestral: r.esTrimestral || false,
