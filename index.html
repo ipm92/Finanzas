@@ -948,12 +948,13 @@ function generarCSVIngresos(registros) {
 
 
 function quienPago(nota) {
-  if (!nota) return "?";
+  if (!nota) return "Sí";
   const n = nota.toLowerCase();
-  if (n.includes("arturo pag") || n.includes("arturo lo pag")) return "Arturo";
-  if (n.includes("mama pag") || n.includes("mamá pag") || n.includes("mama lo pag")) return "Mamá";
-  if (n.includes("yo pag") || n.includes("lo pagué") || n.includes("lo pague") || n.includes("mi parte")) return "Yo";
-  return "Yo"; // default: assume yo pagué
+  if (n.includes("arturo pag") || n.includes("arturo lo pag") ||
+      n.includes("mama pag") || n.includes("mamá pag") ||
+      n.includes("papa pag") || n.includes("papá pag") ||
+      n.includes("machi pag")) return "No";
+  return "Sí"; // default: yo pagué
 }
 
 function distribucionLabel(tipo) {
@@ -986,7 +987,7 @@ function generarCSVSplitwiseConsolidado(registros) {
   const rows = registros.map(r => {
     const grupo = r.splitCustom ? "Custom" : (r.splitwiseTipo||"");
     const montoTotal = convertirCOP(r.montoTotalSplit || r.monto, r.moneda);
-    const pague = quienPago(r.nota) === "Yo" ? "Sí" : "No";
+    const pague = quienPago(r.nota);
     const dist = sanCell(distribucionTexto(r));
     const miParte = miParteSW(r, montoTotal);
     return [grupo, fechaCorta(r.fecha), sanCell(r.descripcion), montoTotal, pague, dist, miParte].join("\t");
