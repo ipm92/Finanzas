@@ -809,6 +809,8 @@ function miParteSplit(r) {
 }
 
 function cuentaLabel(r) {
+  if (r.cuenta === 'fic' && r.categoria === "CDT's al 2030") return "CDT's al 2030";
+  if (r.cuenta === 'fic') return "FIC 1 Corredores";
   if (r.splitwise) {
     const t = (r.splitwiseTipo || "").toLowerCase();
     if (t.includes("familia")) return "Splitwise Familia";
@@ -925,6 +927,43 @@ function generarCSVIngresos(registros) {
   return rows.join("\n");
 }
 
+
+function quienPago(nota) {
+  if (!nota) return "?";
+  const n = nota.toLowerCase();
+  if (n.includes("arturo pag") || n.includes("arturo lo pag")) return "Arturo";
+  if (n.includes("mama pag") || n.includes("mamá pag") || n.includes("mama lo pag")) return "Mamá";
+  if (n.includes("yo pag") || n.includes("lo pagué") || n.includes("lo pague") || n.includes("mi parte")) return "Yo";
+  return "Yo"; // default: assume yo pagué
+}
+
+function distribucionLabel(tipo) {
+  const t = (tipo||"").toLowerCase();
+  if (t.includes("cuartos") && t.includes("coshitas")) return "12.5% × 8 (Familia + Coshitas)";
+  if (t.includes("cuartos")) return "25% × 4 (Familia)";
+  if (t.includes("mitades")) return "50/50 Mamá";
+  return "50/50 Arturo"; // Coshitas
+}
+
+function generarCSVSplitwise(registros, tipo) {
+  function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
+  const div = tipo.toLowerCase().includes("cuartos") && tipo.toLowerCase().includes("coshitas") ? 8
+             : tipo.toLowerCase().includes("cuartos") ? 4
+             : 2;
+  const rows = registros.map(r => {
+    const montoTotal = convertirCOP(r.montoTotalSplit || r.monto, r.moneda);
+    const miParte    = Math.round(montoTotal / div);
+    return [
+      fechaCorta(r.fecha),
+      sanCell(r.descripcion),
+      montoTotal,
+      quienPago(r.nota),
+      miParte,
+      distribucionLabel(r.splitwiseTipo)
+    ].join("\t");
+  });
+  return rows.join("\n");
+}
 function ejecutarExport() {
   const mes = parseInt(document.getElementById("exp-mes").value);
   const anio = parseInt(document.getElementById("exp-anio").value);
@@ -969,6 +1008,25 @@ function ejecutarExport() {
   if (egresos.length)  { descargarCSV(generarCSVEgresos(egresos),   `${nomMes}_egresos.tsv`);  n++; }
   if (ingresos.length) { descargarCSV(generarCSVIngresos(ingresos), `${nomMes}_ingresos.tsv`); n++; }
   if (release.length)  { descargarCSV(generarCSVEgresos(release),   `${nomMes}_release.tsv`);  n++; }
+  // Splitwise TSVs
+  const swTipos = [
+    ["Coshitas",                  "splitwise_coshitas"],
+    ["Familia mitades",           "splitwise_familia_mitades"],
+    ["Familia cuartos",           "splitwise_familia_cuartos"],
+    ["Familia cuartos + Coshitas","splitwise_familia_cuartos_coshitas"],
+  ];
+  for (const [tipo, slug] of swTipos) {
+    const movs = S.registros.filter(r =>
+      enMes(r) &&
+      r.splitwise === true &&
+      (r.splitwiseTipo||"").toLowerCase() === tipo.toLowerCase()
+    ).sort(porFecha);
+    if (movs.length) {
+      descargarCSV(generarCSVSplitwise(movs, tipo), `${nomMes}_${slug}.tsv`);
+      n++;
+    }
+  }
+
   document.getElementById("export-modal").remove();
   if (!n) alert("No hay registros para ese mes y año.");
 }
