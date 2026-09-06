@@ -810,7 +810,8 @@ function cuentaLabel(r) {
     if (co === "Bolsillo Rappipay") return "Bolsillo Rappipay";
     return co;
   }
-  return CUENTA_LABELS[r.cuenta] || r.cuenta || "";
+  const OVERRIDES = {"nubank":"NuBank","davi-tc":"Davi TC","davi-td":"Cta ahorros Davivienda","rappi-tc":"Rappi TC","nequi":"Nequi","fic":"FIC 1 Corredores","efectivo":"Efectivo","daviplata":"Daviplata"};
+  return OVERRIDES[r.cuenta] || CUENTA_LABELS[r.cuenta] || r.cuenta || "";
 }
 
 function notaExport(r) {
