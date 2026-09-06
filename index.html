@@ -894,9 +894,10 @@ function generarCSVEgresos(registros) {
     } else {
       valor = montoCOP;
     }
-    // 3. Build nota with currency prefix for traceability
-    const prefijo = prefijoCOP(r.monto, r.moneda);
+    // 3. Build nota with currency prefix for traceability (skip if already converted)
     const notaBase = notaExport(r);
+    const yaConvertida = notaBase.includes('@ TRM') || notaBase.includes('TRM 3236');
+    const prefijo = (!yaConvertida && (r.moneda === 'USD' || r.moneda === 'EUR' || r.moneda === 'GBP')) ? prefijoCOP(r.monto, r.moneda) : '';
     const notaFinal = prefijo ? prefijo + (notaBase ? '— ' + notaBase : '') : notaBase;
     return [sanCell(r.descripcion), valor, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r)), sanCell(notaFinal)].join("\t");
   });
@@ -919,11 +920,11 @@ function ejecutarExport() {
   const anioStr = String(anio);
   const nomMes = MESES[mes]+anioStr.slice(2);
   const enMes = r => r.fecha && r.fecha.startsWith(anioStr+"-"+mesStr);
-  const esPersonal = r => !r.esInterno && !r.release && r.tipo !== "movimiento";
+  const esPersonal = r => !r.esInterno && !r.release && r.tipo !== "movimiento" && !/zaida/i.test(r.descripcion||"");
   const porFecha = (a,b) => (a.fecha||"").localeCompare(b.fecha||"");
   const egresos  = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "gasto").sort(porFecha);
   const ingresos = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "ingreso").sort(porFecha);
-  const release  = S.registros.filter(r => enMes(r) && r.release === true).sort(porFecha);
+  const release  = S.registros.filter(r => enMes(r) && r.release === true && !/zaida/i.test(r.descripcion||"")).sort(porFecha);
   let n = 0;
   if (egresos.length)  { descargarCSV(generarCSVEgresos(egresos),   `${nomMes}_egresos.tsv`);  n++; }
   if (ingresos.length) { descargarCSV(generarCSVIngresos(ingresos), `${nomMes}_ingresos.tsv`); n++; }
