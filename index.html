@@ -986,7 +986,10 @@ function generarCSVSplitwiseConsolidado(registros) {
   const header = "Grupo\tFecha\tDescripción\tMonto Total\tPagué yo?\tDistribución\tMi parte";
   const rows = registros.map(r => {
     const grupo = r.splitCustom ? "Custom" : (r.splitwiseTipo||"");
-    const montoTotal = convertirCOP(r.montoTotalSplit || r.monto, r.moneda);
+    // montoTotalSplit = total if set; else monto is already "mi parte", reconstruct total
+    const div = r.splitCustom ? 1 : splitDivisor(r.splitwiseTipo);
+    const rawTotal = r.montoTotalSplit ? r.montoTotalSplit : (r.monto * div);
+    const montoTotal = convertirCOP(rawTotal, r.moneda);
     const pague = quienPago(r.nota);
     const dist = sanCell(distribucionTexto(r));
     const miParte = miParteSW(r, montoTotal);
