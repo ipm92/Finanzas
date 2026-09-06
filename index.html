@@ -181,7 +181,7 @@ function formRecVacio() {
   return { tipo:"me_deben", descripcion:"", monto:"", moneda:"COP", fecha_limite:"", nota:"", pagado:false };
 }
 function formVacio(tipo) {
-  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false, categoria:"", splitwiseTipo:"Coshitas", montoTotalSplit:"", esInterno:false, esProyectoApto:false };
+  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false, categoria:"", splitwiseTipo:"Coshitas", montoTotalSplit:"", esInterno:false, esProyectoApto:false, esTrimestral:false };
 }
 
 // ── Estado ─────────────────────────────────────────────────────────────
@@ -501,6 +501,17 @@ function render() {
             <p style="font-size:11px;color:#bbb;margin-top:1px;">Cuotas, escrituración, remodelación.</p>
           </div>
         </div>
+
+        ${form.tipo === 'ingreso' ? `
+        <div onclick="syncForm();S.form.esTrimestral=!S.form.esTrimestral;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:10px;background:${form.esTrimestral?"#E8F5E9":"#F7F6F3"};border:1.5px solid ${form.esTrimestral?"#A5D6A7":"#E8E6E1"};">
+          <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.esTrimestral?"#66BB6A":"#D8D5CE"};position:relative;">
+            <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.esTrimestral?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
+          </div>
+          <div>
+            <p style="font-size:13px;font-weight:500;color:${form.esTrimestral?"#2E7D32":"#888"};">Trimestral (÷3 en 3 meses)</p>
+            <p style="font-size:11px;color:#bbb;margin-top:1px;">Se distribuye en el mes de registro y los 2 siguientes.</p>
+          </div>
+        </div>` : ""}
 
         <button id="btn-guardar" onclick="${S.editandoId?'accionActualizar':'accionGuardar'}()" style="width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:600;background:${form.descripcion&&form.monto?"#1a1a1a":"#E8E6E1"};color:${form.descripcion&&form.monto?"#fff":"#aaa"};">
           ${S.editandoId?"Guardar cambios":"Guardar "+tab}
@@ -924,7 +935,35 @@ function ejecutarExport() {
   const esPersonal = r => !r.esInterno && !r.release && r.tipo !== "movimiento" && !/zaida/i.test(r.descripcion||"");
   const porFecha = (a,b) => (a.fecha||"").localeCompare(b.fecha||"");
   const egresos  = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "gasto").sort(porFecha);
-  const ingresos = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "ingreso").sort(porFecha);
+  // Expand trimestral ingresos: include movs registered in [mes-2, mes] that are trimestral
+  const ingresosBase = S.registros.filter(r => {
+    if (!esPersonal(r) || r.tipo !== "ingreso") return false;
+    if (!r.esTrimestral) return enMes(r);
+    // Check if this mes falls within the 3-month window of the mov
+    const [ry,rm] = (r.fecha||"").split("-").map(Number);
+    const mesReg  = (ry-2000)*12 + rm - 1; // 0-based months from epoch
+    const mesExp  = (parseInt(anioStr)-2000)*12 + mes; // 0-based
+    return mesExp >= mesReg && mesExp <= mesReg + 2;
+  });
+  // Expand trimestral into virtual rows
+  const ingresos = ingresosBase.flatMap(r => {
+    if (!r.esTrimestral) return [r];
+    const [ry,rm,rd] = (r.fecha||"").split("-").map(Number);
+    const mesReg = (ry-2000)*12 + rm - 1;
+    const mesExp = (parseInt(anioStr)-2000)*12 + mes;
+    const tercio = mesExp - mesReg + 1; // 1, 2, or 3
+    const mesReal = mes + 1; // 1-based
+    const diaStr  = String(rd).padStart(2,"0");
+    const anioReal = anioStr;
+    const fechaVirtual = `${anioReal}-${String(mesReal).padStart(2,"0")}-${diaStr}`;
+    return [{
+      ...r,
+      monto: Math.round(r.monto / 3),
+      descripcion: `${r.descripcion} (${tercio}/3)`,
+      fecha: fechaVirtual,
+      _virtual: true
+    }];
+  }).sort(porFecha);
   const release  = S.registros.filter(r => enMes(r) && r.release === true && !/zaida/i.test(r.descripcion||"")).sort(porFecha);
   let n = 0;
   if (egresos.length)  { descargarCSV(generarCSVEgresos(egresos),   `${nomMes}_egresos.tsv`);  n++; }
@@ -1031,6 +1070,7 @@ async function accionGuardar() {
     montoTotalSplit: S.form.montoTotalSplit ? parseFloat(String(S.form.montoTotalSplit).replace(/\./g,"").replace(/\D/g,"")) : null,
     esInterno:   S.form.esInterno || false,
     esProyectoApto: S.form.esProyectoApto || false,
+    esTrimestral: S.form.esTrimestral || false,
   };
 
   try {
@@ -1062,6 +1102,7 @@ function accionEditar(id) {
     montoTotalSplit: r.montoTotalSplit ? String(r.montoTotalSplit) : "",
     esInterno:   r.esInterno || false,
     esProyectoApto: r.esProyectoApto || false,
+    esTrimestral: r.esTrimestral || false,
     cuenta:      r.cuenta || "davi-td",
     fecha:       r.fecha || hoy(),
     moneda:      r.moneda || "COP",
@@ -1115,6 +1156,7 @@ async function accionActualizar() {
     montoTotalSplit: S.form.montoTotalSplit ? parseFloat(String(S.form.montoTotalSplit).replace(/\./g,"").replace(/\D/g,"")) : null,
     esInterno:   S.form.esInterno || false,
     esProyectoApto: S.form.esProyectoApto || false,
+    esTrimestral: S.form.esTrimestral || false,
   };
 
   try {
