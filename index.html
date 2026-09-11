@@ -131,7 +131,7 @@ const CATS_GASTO = [
   "Impuestos Financieros",
   "Release"
 ];
-const CATS_INGRESO = ["Salarios (Freelance)","Dividendos","CDT's al 2030","Adicionales"];
+const CATS_INGRESO = ["Salarios (Freelance)","Dividendos","CDT´s al 2030","Adicionales"];
 
 // Auto-suggest: keywords → category
 const AUTOCAT = [
@@ -828,7 +828,6 @@ function miParteSplit(r) {
 }
 
 function cuentaLabel(r) {
-  if (r.cuenta === 'fic' && r.categoria === "CDT's al 2030") return "CDT's al 2030";
   if (r.cuenta === 'fic') return "Corredores";
   if (r.splitwise) {
     const t = (r.splitwiseTipo || "").toLowerCase();
