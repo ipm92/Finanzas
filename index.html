@@ -6,36 +6,35 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Finanzas" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Mis Finanzas</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { background: #F7F6F3; color: #1a1a1a; font-family: 'Inter', sans-serif; min-height: 100vh; }
-    input, button, textarea { font-family: 'Inter', sans-serif; }
-    input, textarea { outline: none; -webkit-appearance: none; }
-    input:focus, textarea:focus { border-color: #1a1a1a !important; }
+    input, button, textarea, select { font-family: 'Inter', sans-serif; }
+    input, textarea, select { outline: none; -webkit-appearance: none; }
+    input:focus, textarea:focus, select:focus { border-color: #1a1a1a !important; }
     button { cursor: pointer; border: none; background: none; }
     button:active { opacity: .7; transform: scale(.98); }
     .fade { animation: fi .25s ease; }
     @keyframes fi { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
     input[type=date]::-webkit-calendar-picker-indicator { opacity: .4; }
     ::-webkit-scrollbar { width: 0; }
-    .safe-top  { padding-top: env(safe-area-inset-top); }
-    .safe-bot  { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
-    .row { transition: background .1s; }
+    .safe-top { padding-top: env(safe-area-inset-top); }
+    .safe-bot { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
     .row:active { background: #eeecea !important; }
+    .mes-header { cursor: pointer; user-select: none; }
+    .mes-header:active { opacity: .7; }
   </style>
-<script>document.addEventListener("click",function(e){if(!e.target.closest("#f-cat-wrap")){var dd=document.getElementById("f-cat-dropdown");if(dd)dd.style.display="none";}});</script>
 </head>
 <body>
 <div id="app"></div>
 <script>
-
-// ── Config Supabase ────────────────────────────────────────────────────
+// ── Config ─────────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://xguzppefwanjvonlpwxs.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndXpwcGVmd2FuanZvbmxwd3hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMzQ0NTMsImV4cCI6MjA5NDgxMDQ1M30.Q1v3wlDLgwaoOQ767VoQwoFCl3lAWbCowylh1cQ5lG8";
-const API = SUPABASE_URL + "/rest/v1/registros";
+const API     = SUPABASE_URL + "/rest/v1/registros";
+const API_MES = SUPABASE_URL + "/rest/v1/meses_archivados";
 
 function xhr(method, url, body) {
   return new Promise((resolve, reject) => {
@@ -46,14 +45,12 @@ function xhr(method, url, body) {
     r.setRequestHeader("Authorization", "Bearer " + SUPABASE_KEY);
     r.setRequestHeader("Prefer", "return=representation");
     r.timeout = 12000;
-    r.ontimeout = () => reject(new Error("Timeout - sin conexión"));
+    r.ontimeout = () => reject(new Error("Timeout"));
     r.onerror   = () => reject(new Error("Error de red"));
     r.onload    = () => {
       if (r.status >= 200 && r.status < 300) {
         try { resolve(JSON.parse(r.responseText)); } catch(e) { resolve([]); }
-      } else {
-        reject(new Error("Error " + r.status + ": " + r.responseText));
-      }
+      } else { reject(new Error("Error " + r.status + ": " + r.responseText)); }
     };
     r.send(body ? JSON.stringify(body) : null);
   });
@@ -66,57 +63,45 @@ async function dbGuardar(obj) {
   const res = await xhr("POST", API + "?apikey=" + SUPABASE_KEY, obj);
   return Array.isArray(res) ? res[0] : res;
 }
-async function dbEliminar(id) {
-  await xhr("DELETE", API + "?id=eq." + id + "&apikey=" + SUPABASE_KEY);
-}
-const API_REC = SUPABASE_URL + "/rest/v1/recordatorios";
-async function dbCargarRec() {
-  return await xhr("GET", API_REC + "?order=fecha_limite.asc&apikey=" + SUPABASE_KEY);
-}
-async function dbGuardarRec(obj) {
-  const res = await xhr("POST", API_REC + "?apikey=" + SUPABASE_KEY, obj);
-  return Array.isArray(res) ? res[0] : res;
-}
-async function dbActualizarRec(id, obj) {
-  const res = await xhr("PATCH", API_REC + "?id=eq." + id + "&apikey=" + SUPABASE_KEY, obj);
-  return Array.isArray(res) ? res[0] : res;
-}
-async function dbEliminarRec(id) {
-  await xhr("DELETE", API_REC + "?id=eq." + id + "&apikey=" + SUPABASE_KEY);
-}
 async function dbActualizar(id, obj) {
   const res = await xhr("PATCH", API + "?id=eq." + id + "&apikey=" + SUPABASE_KEY, obj);
   return Array.isArray(res) ? res[0] : res;
 }
+async function dbEliminar(id) {
+  await xhr("DELETE", API + "?id=eq." + id + "&apikey=" + SUPABASE_KEY);
+}
+async function dbCargarMeses() {
+  return await xhr("GET", API_MES + "?apikey=" + SUPABASE_KEY);
+}
+async function dbArchivarMes(mes) {
+  return await xhr("POST", API_MES + "?apikey=" + SUPABASE_KEY, { mes });
+}
+async function dbDesarchivarMes(mes) {
+  await xhr("DELETE", API_MES + "?mes=eq." + encodeURIComponent(mes) + "&apikey=" + SUPABASE_KEY);
+}
 
-// ── Datos ──────────────────────────────────────────────────────────────
+// ── Datos ───────────────────────────────────────────────────────────────
 const CUENTAS_GASTO = [
   { id:"davi-td",   label:"Davivienda Ahorros TD", color:"#D94F3D" },
   { id:"davi-tc",   label:"Davivienda TC",          color:"#C4612A" },
   { id:"rappi-tc",  label:"Rappi TC",               color:"#E05C3A" },
   { id:"nequi",     label:"Nequi",                  color:"#7B4FBF" },
   { id:"efectivo",  label:"Efectivo",               color:"#2E7D32" },
-  { id:"splitwise", label:"Splitwise",              color:"#E8760A" },
-  { id:"fic",       label:"Corredores",          color:"#00695C" },
-  { id:"otro",      label:"Otro",                    color:"#888888" },
+  { id:"splitwise", label:"Splitwise",              color:"#1A73A7" },
+  { id:"fic",       label:"Corredores",             color:"#00695C" },
+  { id:"otro",      label:"Otro",                   color:"#888888" },
 ];
 const CUENTAS_INGRESO = [
   { id:"davi-td",   label:"Davivienda Ahorros TD", color:"#D94F3D" },
   { id:"davi-tc",   label:"Davivienda TC",          color:"#C4612A" },
   { id:"rappi-tc",  label:"Rappi TC",               color:"#E05C3A" },
   { id:"nequi",     label:"Nequi",                  color:"#7B4FBF" },
-  { id:"nubank",    label:"NuBank",                 color:"#6B2D9E" },
+  { id:"nubank",    label:"NuBank",                 color:"#820AD1" },
   { id:"daviplata", label:"Daviplata",              color:"#B8202A" },
-  { id:"fic",       label:"Corredores",          color:"#00695C" },
-  { id:"otro",      label:"Otro",                    color:"#888888" },
+  { id:"fic",       label:"Corredores",             color:"#00695C" },
+  { id:"otro",      label:"Otro",                   color:"#888888" },
 ];
-const MONEDAS = [
-  { id:"COP", simbolo:"$",   label:"COP" },
-  { id:"USD", simbolo:"USD", label:"USD" },
-  { id:"EUR", simbolo:"€",   label:"EUR" },
-];
-
-
+const MONEDAS = ["COP","USD","EUR","GBP"];
 const CATS_GASTO = [
   "Subscripciones","Planilla","Celular","Peluqueria (Pelo y Uñas)","Masajes",
   "Cuotas de manejo productos financieros","Arriendo",
@@ -126,234 +111,110 @@ const CATS_GASTO = [
   "Servicios Públicos: Agua","Servicios Públicos: Gas","Servicios Públicos: Luz",
   "Servicios Privados (Internet, etc.)","Compras casa","Regalos o donaciones",
   "Empleados Domésticos (Servicio, Chofer, Jardinero, Vigilante, etc.)",
-  "Cursos","Fondo viajes","Seguro Medico Bolivar","ICA",
-  "Impuesto al Patrimonio","Declaración de renta","Movimiento interno",
-  "Impuestos Financieros",
-  "Release"
+  "Cursos","Fondo viajes","Seguro Medico Bolivar","ICA","Impuestos Financieros",
+  "Impuesto al Patrimonio","Declaración de renta","Movimiento interno","Release"
 ];
 const CATS_INGRESO = ["Salarios (Freelance)","Dividendos","CDT´s al 2030","Adicionales"];
 
-// Auto-suggest: keywords → category
-const AUTOCAT = [
-  [["uber","didi","taxi","cabify"],"Transportes (Ubers, Didis)"],
-  [["gasolina","peaje","estacion","terpel","biomax","mobil"],"Carro (gasolina, peajes)"],
-  [["rappi","ifood","domicilio"],"Recreación (paseos, ropa, compras, restaurantes)"],
-  [["spotify","netflix","amazon","apple","google","adobe","notion","claude","openai","chatgpt","youtube","hbo","disney","paramount"],"Subscripciones"],
-  [["nequi","daviplata","transferencia","pago tc","pago tarjeta"],"Movimiento interno"],
-  [["mercado","supermercado","carulla","exito","ara","d1","alkosto","olimpica","jumbo"],"Mercados"],
-  [["gimnasio","smart fit","bodytech","spinning","yoga","pilates"],"Gimnasio"],
-  [["peluqueria","barberia","manicure","pedicure","uñas","pelo","salon","blowout"],"Peluqueria (Pelo y Uñas)"],
-  [["masaje","spa","bienestar"],"Masajes"],
-  [["epm","gas natural","codensa","acueducto","claro","tigo","movistar","internet","electricidad","energia","agua"],"Servicios Públicos: Agua"],
-  [["arriendo","alquiler","renta","canon"],"Arriendo"],
-  [["medico","doctor","clinica","hospital","farmacia","drogas","medicamento","consulta","control","laboratorio"],"Citas y controles médicos + medicamentos"],
-  [["seguro","bolivar"],"Seguro Medico Bolivar"],
-  [["ica","impuesto","patrimonio","declaracion","renta","dian"],"Impuesto al Patrimonio"],
-  [["empleada","servicio","chofer","jardinero","vigilante","aseo","limpieza"],"Empleados Domésticos (Servicio, Chofer, Jardinero, Vigilante, etc.)"],
-  [["regalo","donacion","donativo","causa","caridad"],"Regalos o donaciones"],
-  [["curso","clase","taller","diplomado","universidad","capacitacion"],"Cursos"],
-  [["planilla","nomina","salario","pago empleado","seguridad social","eps","arl"],"Planilla"],
-  [["restaurante","almuerzo","cena","desayuno","cafe","pizza","sushi","hambur","comida","bar","cerveza","trago"],"Recreación (paseos, ropa, compras, restaurantes)"],
-  [["celular","telefono","plan","claro movil","tigo movil","movistar movil"],"Celular"],
-  [["viaje","hotel","airbnb","vuelo","aerolinea","booking","hospedaje"],"Fondo viajes"],
-];
-
-function autoCategoria(desc) {
-  if (!desc) return "";
-  const d = desc.toLowerCase();
-  for (const [keys, cat] of AUTOCAT) {
-    if (keys.some(k => d.includes(k))) return cat;
-  }
-  return "";
-}
+const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 function hoy() { return new Date().toISOString().split("T")[0]; }
 function getCuenta(id, tipo) { return (tipo==="gasto"?CUENTAS_GASTO:CUENTAS_INGRESO).find(c=>c.id===id)||{}; }
-function getMoneda(id) { return MONEDAS.find(m=>m.id===id)||MONEDAS[0]; }
 function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function formatFecha(f) {
   if(!f) return "";
   const [y,m,d] = f.split("-");
-  const M = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-  return parseInt(d)+" "+M[parseInt(m)-1];
+  return parseInt(d)+" "+MESES_ES[parseInt(m)-1];
 }
-function formRecVacio() {
-  return { tipo:"me_deben", descripcion:"", monto:"", moneda:"COP", fecha_limite:"", nota:"", pagado:false };
+function mesKey(fecha) { return fecha ? fecha.slice(0,7) : ""; } // YYYY-MM
+function mesLabel(key) {
+  if(!key) return "";
+  const [y,m] = key.split("-");
+  return MESES_ES[parseInt(m)-1] + " " + y;
 }
 function formVacio(tipo) {
-  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaDestino:"davi-td", fecha:hoy(), splitwise:false, moneda:"COP", release:false, cuentaOtro:"", enExcel:false, categoria:"", splitwiseTipo:"Coshitas", montoTotalSplit:"", splitCustom:null, esInterno:false, esProyectoApto:false, esTrimestral:false };
+  return { tipo, descripcion:"", nota:"", monto:"", cuenta:"davi-td", cuentaOtro:"",
+           fecha:hoy(), moneda:"COP", categoria:"", release:false, esInterno:false,
+           esProyectoApto:false, splitwise:false, splitwiseRegla:"", splitwiseConQuien:"" };
 }
 
-// ── Estado ─────────────────────────────────────────────────────────────
+// ── Estado ──────────────────────────────────────────────────────────────
 const S = {
-  registros: [],
-  tab: "gasto",
-  form: formVacio("gasto"),
-  mostrarForm: false,
-  filtro: "todos",
-  eliminarId: null,
-  editandoId: null,
-  filtroCategoria: "",
+  registros: [], mesesArchivados: new Set(),
+  tab: "gasto", form: formVacio("gasto"),
+  mostrarForm: false, filtro: "todos",
+  eliminarId: null, editandoId: null,
+  mesesColapsados: new Set(), // collapsed by default for archived
   catBusqueda: "",
-  seccion: "registros", // "registros" | "recordatorios"
-  recordatorios: [],
-  formRec: null,
-  editandoRecId: null,
-  eliminarRecId: null,
 };
+
+// ── Auth ────────────────────────────────────────────────────────────────
+const PWD = "164892";
+function mostrarLogin() {
+  document.getElementById("app").innerHTML = `
+    <div style="min-height:100vh;background:#F7F6F3;display:flex;align-items:center;justify-content:center;padding:24px;">
+      <div style="background:#fff;border-radius:16px;padding:32px 24px;width:100%;max-width:320px;border:1px solid #E8E6E1;">
+        <p style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">Finanzas</p>
+        <p style="font-size:13px;color:#bbb;margin-bottom:24px;">Ingresa tu contraseña</p>
+        <input id="inp-pwd" type="password" placeholder="Contraseña"
+          style="width:100%;background:#F7F6F3;border:1.5px solid #E8E6E1;border-radius:10px;padding:12px 14px;font-size:15px;outline:none;margin-bottom:12px;"
+          onkeydown="if(event.key==='Enter') verificarPwd()" />
+        <button onclick="verificarPwd()"
+          style="width:100%;padding:13px;border-radius:10px;background:#1a1a1a;color:#fff;font-size:15px;font-weight:600;border:none;cursor:pointer;">
+          Entrar
+        </button>
+        <p id="pwd-error" style="font-size:12px;color:#D94F3D;margin-top:10px;text-align:center;display:none;">Contraseña incorrecta</p>
+      </div>
+    </div>`;
+  setTimeout(() => { const i=document.getElementById("inp-pwd"); if(i) i.focus(); }, 100);
+}
+function verificarPwd() {
+  if (document.getElementById("inp-pwd").value === PWD) {
+    sessionStorage.setItem("auth","1"); iniciarApp();
+  } else {
+    const e=document.getElementById("pwd-error"); if(e) e.style.display="block";
+    document.getElementById("inp-pwd").value="";
+  }
+}
+function iniciarApp() {
+  document.getElementById("app").innerHTML = `<div style="min-height:100vh;background:#F7F6F3;display:flex;align-items:center;justify-content:center;"><p style="font-size:13px;color:#bbb;">Cargando...</p></div>`;
+  Promise.all([dbCargar(), dbCargarMeses()])
+    .then(([regs, meses]) => {
+      S.registros = regs || [];
+      S.mesesArchivados = new Set((meses||[]).map(m=>m.mes));
+      // Collapse archived months by default
+      S.mesesColapsados = new Set(S.mesesArchivados);
+      render();
+    })
+    .catch(e => {
+      document.getElementById("app").innerHTML = `<div style="min-height:100vh;background:#F7F6F3;display:flex;align-items:center;justify-content:center;padding:24px;"><p style="font-size:13px;color:#D94F3D;text-align:center;">Error al conectar:<br>${e.message}</p></div>`;
+    });
+}
 
 // ── Render ──────────────────────────────────────────────────────────────
 const LBL = `font-size:11px;font-weight:500;color:#999;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;display:block;`;
-const INP = `width:100%;background:#fff;border:1.5px solid #E8E6E1;border-radius:10px;padding:11px 14px;color:#1a1a1a;font-size:15px;transition:border-color .15s;`;
-
-function diasRestantes(fecha) {
-  if (!fecha || fecha === 'null' || fecha === '') return null;
-  const d = new Date(fecha);
-  if (isNaN(d.getTime())) return null;
-  const hoyMs = new Date().setHours(0,0,0,0);
-  const fMs   = d.setHours(0,0,0,0);
-  return Math.round((fMs - hoyMs) / 86400000);
-}
-
-function renderRecordatorios() {
-  const recs = S.recordatorios;
-  const pendientes = recs.filter(r => !r.pagado);
-  const pagados    = recs.filter(r => r.pagado);
-  const mon = (id) => MONEDAS.find(m=>m.id===id)||MONEDAS[0];
-
-  const formRec = S.formRec;
-  const INP2 = `width:100%;background:#fff;border:1.5px solid #E8E6E1;border-radius:10px;padding:11px 14px;color:#1a1a1a;font-size:15px;`;
-
-  return `
-  <div style="margin-top:16px;">
-
-    <!-- Botón nuevo recordatorio -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <p style="font-size:11px;font-weight:500;color:#999;letter-spacing:.5px;text-transform:uppercase;">${pendientes.length} pendiente${pendientes.length!==1?'s':''}</p>
-      <button onclick="S.formRec=formRecVacio();S.editandoRecId=null;render()" style="font-size:13px;font-weight:600;color:#1a1a1a;background:#fff;border:1.5px solid #E8E6E1;border-radius:20px;padding:6px 16px;">+ Nuevo</button>
-    </div>
-
-    <!-- Formulario recordatorio -->
-    ${formRec ? `
-    <div class="fade" style="background:#fff;border:1px solid #E8E6E1;border-radius:16px;padding:20px;margin-bottom:16px;">
-      <div style="margin-bottom:14px;">
-        <label style="${LBL}">Tipo</label>
-        <div style="display:flex;gap:8px;">
-          <button onclick="syncFormRec();S.formRec.tipo='me_deben';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${formRec.tipo==='me_deben'?'#3DAD7F14':'#F7F6F3'};color:${formRec.tipo==='me_deben'?'#3DAD7F':'#777'};border:1.5px solid ${formRec.tipo==='me_deben'?'#3DAD7F55':"#E8E6E1"};">Me deben</button>
-          <button onclick="syncFormRec();S.formRec.tipo='debo_pagar';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${formRec.tipo==='debo_pagar'?'#D94F3D14':'#F7F6F3'};color:${formRec.tipo==='debo_pagar'?'#D94F3D':'#777'};border:1.5px solid ${formRec.tipo==='debo_pagar'?'#D94F3D55':"#E8E6E1"};">Debo pagar</button>
-        </div>
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="${LBL}">Descripción</label>
-        <input id="fr-desc" type="text" value="${esc(formRec.descripcion)}" oninput="S.formRec.descripcion=this.value"
-          placeholder="Ej. Juan me debe almuerzo" style="${INP2}outline:none;" />
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="${LBL}">Nota</label>
-        <textarea id="fr-nota" oninput="S.formRec.nota=this.value" placeholder="Detalle adicional..."
-          style="width:100%;background:#fff;border:1.5px solid #E8E6E1;border-radius:10px;padding:11px 14px;color:#1a1a1a;font-size:14px;resize:none;height:64px;outline:none;">${esc(formRec.nota)}</textarea>
-      </div>
-      <div style="display:flex;gap:10px;margin-bottom:14px;">
-        <div style="flex:1;">
-          <label style="${LBL}">Monto</label>
-          <input id="fr-monto" type="text" inputmode="numeric" value="${formRec.monto?Number(formRec.monto).toLocaleString('es-CO'):''}"
-            oninput="formatMontoRec(this)" placeholder="0" style="${INP2}outline:none;" />
-        </div>
-        <div style="flex:1;">
-          <label style="${LBL}">Fecha límite</label>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            <div style="display:flex;gap:6px;">
-              <button onclick="syncFormRec();S.formRec.fecha_limite='';render()" style="flex:1;padding:8px 0;border-radius:8px;font-size:12px;font-weight:500;background:${!formRec.fecha_limite?'#1a1a1a':'#F7F6F3'};color:${!formRec.fecha_limite?'#fff':'#777'};border:1.5px solid ${!formRec.fecha_limite?'#1a1a1a':"#E8E6E1"};">Sin fecha</button>
-              <button onclick="syncFormRec();S.formRec.fecha_limite=S.formRec.fecha_limite||hoy();render()" style="flex:1;padding:8px 0;border-radius:8px;font-size:12px;font-weight:500;background:${formRec.fecha_limite?'#1a1a1a':'#F7F6F3'};color:${formRec.fecha_limite?'#fff':'#777'};border:1.5px solid ${formRec.fecha_limite?'#1a1a1a':"#E8E6E1"};">Con fecha</button>
-            </div>
-            ${formRec.fecha_limite?`<input type="date" value="${formRec.fecha_limite}" onchange="S.formRec.fecha_limite=this.value" style="${INP2}outline:none;color-scheme:light;" />`:''}
-          </div>
-        </div>
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="${LBL}">Moneda</label>
-        <div style="display:flex;gap:6px;">
-          ${MONEDAS.map(m=>`<button onclick="syncFormRec();S.formRec.moneda='${m.id}';render()" style="flex:1;padding:9px 0;border-radius:10px;font-size:13px;font-weight:500;background:${formRec.moneda===m.id?'#1a1a1a':'#F7F6F3'};color:${formRec.moneda===m.id?'#fff':'#777'};border:1.5px solid ${formRec.moneda===m.id?'#1a1a1a':"#E8E6E1"};">${m.label}</button>`).join("")}
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="accionCancelarRec()" style="flex:1;padding:13px;border-radius:12px;font-size:14px;font-weight:500;background:#F0EDE8;color:#888;">Cancelar</button>
-        <button onclick="accionGuardarRec()" style="flex:2;padding:13px;border-radius:12px;font-size:15px;font-weight:600;background:#1a1a1a;color:#fff;">${S.editandoRecId?"Guardar cambios":"Agregar"}</button>
-      </div>
-    </div>` : ""}
-
-    <!-- Lista pendientes -->
-    <div style="display:flex;flex-direction:column;gap:1px;margin-bottom:20px;">
-      ${pendientes.length===0 ? `<div style="text-align:center;padding:32px 0;"><p style="font-size:13px;color:#ccc;">Sin recordatorios pendientes</p></div>` :
-        pendientes.map((r,i) => {
-          const fl = (r.fecha_limite && r.fecha_limite !== 'null' && r.fecha_limite !== '') ? r.fecha_limite : null;
-          const diasRaw = fl ? diasRestantes(fl) : null;
-          const dias = (diasRaw !== null && !isNaN(diasRaw)) ? diasRaw : null;
-          const vencido = dias !== null && dias < 0;
-          const urgente = dias !== null && dias >= 0 && dias <= 3;
-          const colorTipo = r.tipo==='me_deben' ? '#3DAD7F' : '#D94F3D';
-          const isFirst = i===0, isLast = i===pendientes.length-1;
-          const rad = isFirst&&isLast?"12px":isFirst?"12px 12px 4px 4px":isLast?"4px 4px 12px 12px":"4px";
-          return `
-          <div style="background:#fff;border-radius:${rad};padding:14px 16px;display:flex;align-items:flex-start;gap:12px;">
-            <div style="width:3px;min-height:36px;border-radius:2px;flex-shrink:0;background:${colorTipo};margin-top:2px;"></div>
-            <div style="flex:1;min-width:0;">
-              <p style="font-size:15px;font-weight:600;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.descripcion)}</p>
-              <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
-                <span style="font-size:11px;font-weight:500;color:${colorTipo};background:${colorTipo}14;padding:2px 8px;border-radius:20px;">${r.tipo==='me_deben'?'Me deben':'Debo pagar'}</span>
-${dias!==null?`<span style="font-size:11px;font-weight:600;color:${vencido?'#D94F3D':urgente?'#C4612A':'#bbb'};background:${vencido?'#D94F3D14':urgente?'#C4612A14':'transparent'};padding:${vencido||urgente?'2px 8px':'0'};border-radius:20px;">${vencido?'Vencido hace '+Math.abs(dias)+' día'+(Math.abs(dias)!==1?'s':''):dias===0?'Vence hoy':'Vence en '+dias+' día'+(dias!==1?'s':'')}</span>`:'<span style="font-size:11px;color:#ccc;">Sin fecha límite</span>'}
-              </div>
-              ${r.nota?`<p style="font-size:13px;color:#999;margin-top:5px;font-style:italic;">${esc(r.nota)}</p>`:""}
-            </div>
-            <div style="text-align:right;flex-shrink:0;">
-              <p style="font-size:15px;font-weight:700;color:${colorTipo};">${mon(r.moneda).simbolo}${Number(r.monto).toLocaleString('es-CO')}</p>
-              ${S.eliminarRecId===r.id ?
-                `<div style="display:flex;gap:5px;margin-top:6px;justify-content:flex-end;">
-                  <button onclick="accionEliminarRec(${r.id})" style="font-size:11px;font-weight:600;color:#D94F3D;background:#D94F3D14;border-radius:6px;padding:3px 9px;">Eliminar</button>
-                  <button onclick="S.eliminarRecId=null;render()" style="font-size:11px;color:#999;background:#F0EDE8;border-radius:6px;padding:3px 9px;">Cancelar</button>
-                </div>` :
-                `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:4px;">
-                  <button onclick="S.eliminarRecId=${r.id};render()" style="font-size:16px;color:#ddd;">×</button>
-                  <button onclick="accionEditarRec(${r.id})" style="font-size:11px;color:#bbb;font-weight:500;background:#F0EDE8;border-radius:6px;padding:2px 8px;">editar</button>
-                  <button onclick="accionMarcarPagado(${r.id})" style="font-size:11px;color:#3DAD7F;font-weight:500;background:#3DAD7F14;border-radius:6px;padding:2px 8px;">Marcar pagado</button>
-                </div>`
-              }
-            </div>
-          </div>`;
-        }).join("")}
-    </div>
-
-    <!-- Pagados -->
-    ${pagados.length>0?`
-    <p style="font-size:11px;font-weight:500;color:#ccc;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;">Pagados (${pagados.length})</p>
-    <div style="display:flex;flex-direction:column;gap:1px;">
-      ${pagados.map((r,i)=>{
-        const colorTipo = r.tipo==='me_deben' ? '#3DAD7F' : '#D94F3D';
-        const isFirst=i===0,isLast=i===pagados.length-1;
-        const rad=isFirst&&isLast?"12px":isFirst?"12px 12px 4px 4px":isLast?"4px 4px 12px 12px":"4px";
-        return `<div style="background:#fff;border-radius:${rad};padding:12px 16px;display:flex;align-items:center;gap:12px;opacity:.5;">
-          <div style="width:3px;height:28px;border-radius:2px;flex-shrink:0;background:${colorTipo};"></div>
-          <div style="flex:1;min-width:0;">
-            <p style="font-size:14px;font-weight:500;color:#888;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.descripcion)}</p>
-          </div>
-          <p style="font-size:14px;font-weight:600;color:#bbb;">${mon(r.moneda).simbolo}${Number(r.monto).toLocaleString('es-CO')}</p>
-          <button onclick="accionEliminarRec(${r.id})" style="font-size:16px;color:#ddd;">×</button>
-        </div>`;
-      }).join("")}
-    </div>`:""}
-  </div>`;
-}
+const INP = `width:100%;background:#fff;border:1.5px solid #E8E6E1;border-radius:10px;padding:11px 14px;color:#1a1a1a;font-size:15px;`;
 
 function render() {
   const { tab, mostrarForm, filtro, eliminarId, form, registros } = S;
   const cuentas = tab==="gasto" ? CUENTAS_GASTO : CUENTAS_INGRESO;
-  const lista = registros.filter(r => {
-    if (filtro === "sin-categoria") return !r.categoria || r.categoria === "";
-    if (filtro === "sw-sin-tipo") return r.splitwise && (!r.splitwiseTipo || r.splitwiseTipo === "Coshitas" && !r.montoTotalSplit);
-    const tipoOk = filtro === "todos" || r.tipo === filtro;
-    const catOk = !S.filtroCategoria || r.categoria === S.filtroCategoria;
-    return tipoOk && catOk;
+  const cats = tab==="ingreso" ? CATS_INGRESO : CATS_GASTO;
+
+  // Filter
+  let lista = registros.filter(r => {
+    if (filtro==="sin-categoria") return !r.categoria || r.categoria==="";
+    if (filtro==="todos") return true;
+    return r.tipo===filtro;
   });
+
+  // Group by month
+  const grupos = {};
+  lista.forEach(r => {
+    const k = mesKey(r.fecha);
+    if (!grupos[k]) grupos[k] = [];
+    grupos[k].push(r);
+  });
+  const mesesOrdenados = Object.keys(grupos).sort().reverse();
 
   document.getElementById("app").innerHTML = `
   <div style="min-height:100vh;background:#F7F6F3;">
@@ -361,995 +222,417 @@ function render() {
     <!-- HEADER -->
     <div class="safe-top" style="background:#fff;border-bottom:1px solid #E8E6E1;padding:20px 20px 16px;">
       <div style="max-width:500px;margin:0 auto;">
-        <p style="font-size:11px;font-weight:500;color:#bbb;letter-spacing:1px;text-transform:uppercase;">Mi registro</p>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-          <h1 style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#1a1a1a;">Finanzas</h1>
-          <button onclick="mostrarExport()" style="height:38px;padding:0 14px;border-radius:20px;background:#F7F6F3;color:#777;font-size:12px;font-weight:500;border:1.5px solid #E8E6E1;margin-right:8px;">↓ CSV</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div>
+            <p style="font-size:11px;font-weight:500;color:#bbb;letter-spacing:1px;text-transform:uppercase;">Mi registro</p>
+            <h1 style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#1a1a1a;margin-top:2px;">Finanzas</h1>
+          </div>
           <button onclick="accionToggleForm()" style="width:38px;height:38px;border-radius:50%;background:${mostrarForm?"#f0ede8":"#1a1a1a"};color:${mostrarForm?"#999":"#fff"};font-size:20px;display:flex;align-items:center;justify-content:center;">
             ${mostrarForm?"×":"+"}
           </button>
         </div>
-        <!-- Nav principal -->
-        <div style="display:flex;gap:6px;margin-top:14px;">
-          <button onclick="S.seccion='registros';S.formRec=null;render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='registros'?'#1a1a1a':'transparent'};color:${S.seccion==='registros'?'#fff':'#999'};border:1.5px solid ${S.seccion==='registros'?'#1a1a1a':"#E8E6E1"};">Registros</button>
-          <button onclick="S.seccion='recordatorios';S.mostrarForm=false;if(!S.recordatorios.length)cargarRec();render()" style="padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;background:${S.seccion==='recordatorios'?'#1a1a1a':'transparent'};color:${S.seccion==='recordatorios'?'#fff':'#999'};border:1.5px solid ${S.seccion==='recordatorios'?'#1a1a1a':"#E8E6E1"};">Recordatorios</button>
+        <div style="display:flex;gap:6px;margin-top:12px;">
+          ${["gasto","ingreso","movimiento"].map(t=>`
+            <button onclick="accionSetTab('${t}')" style="padding:7px 14px;border-radius:20px;font-size:12px;font-weight:500;background:${tab===t?"#1a1a1a":"transparent"};color:${tab===t?"#fff":"#999"};border:1.5px solid ${tab===t?"#1a1a1a":"#E8E6E1"};">
+              ${t==="gasto"?"Gasto":t==="ingreso"?"Ingreso":"Interno"}
+            </button>`).join("")}
         </div>
-
       </div>
     </div>
 
     <div class="safe-bot" style="max-width:500px;margin:0 auto;padding:0 16px;">
 
       <!-- FORMULARIO -->
-      ${mostrarForm && S.seccion==="registros" ? `
-      <div class="fade" style="background:#fff;border:1px solid #E8E6E1;border-radius:16px;padding:20px;margin-top:16px;">
+      ${mostrarForm ? renderForm(form, cuentas, cats) : ""}
 
-        <div style="display:flex;gap:8px;margin-bottom:16px;">
-          <button onclick="syncForm();S.form.tipo='gasto';S.tab='gasto';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='gasto'?'#D94F3D14':'#F7F6F3'};color:${form.tipo==='gasto'?'#D94F3D':'#777'};border:1.5px solid ${form.tipo==='gasto'?'#D94F3D55':"#E8E6E1"};">Gasto</button>
-          <button onclick="syncForm();S.form.tipo='ingreso';S.tab='ingreso';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='ingreso'?'#3DAD7F14':'#F7F6F3'};color:${form.tipo==='ingreso'?'#3DAD7F':'#777'};border:1.5px solid ${form.tipo==='ingreso'?'#3DAD7F55':"#E8E6E1"};">Ingreso</button>
-          <button onclick="syncForm();S.form.tipo='movimiento';S.tab='movimiento';render()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:${form.tipo==='movimiento'?'#7B4FBF14':'#F7F6F3'};color:${form.tipo==='movimiento'?'#7B4FBF':'#777'};border:1.5px solid ${form.tipo==='movimiento'?'#7B4FBF55':"#E8E6E1"};">Interno</button>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="${LBL}">Descripción</label>
-          <input id="f-desc" type="text" value="${esc(form.descripcion)}" oninput="onDescInput(this)"
-            placeholder="${tab==="gasto"?"Ej. Almuerzo":"Ej. Transferencia"}" style="${INP}" />
-        </div>
-
-        <div style="margin-bottom:16px;" id="f-cat-wrap">
-          <label style="${LBL}">Categoría</label>
-          <div style="position:relative;">
-            <input id="f-cat-input" type="text"
-              value="${esc(form.categoria)}"
-              oninput="filtrarCats(this.value)"
-              onfocus="mostrarDropdownCat()"
-              placeholder="Escribe para buscar..."
-              autocomplete="off"
-              style="${INP}padding-right:30px;" />
-            ${form.categoria ? `<span onclick="S.form.categoria='';S.catBusqueda='';render()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:#bbb;font-size:16px;">×</span>` : ""}
-          </div>
-          <div id="f-cat-dropdown" style="display:none;position:absolute;z-index:100;background:#fff;border:1.5px solid #E8E6E1;border-radius:10px;max-height:200px;overflow-y:auto;width:calc(100% - 32px);box-shadow:0 4px 12px rgba(0,0,0,.08);"></div>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="${LBL}">Nota</label>
-          <textarea id="f-nota" oninput="S.form.nota=this.value"
-            placeholder="Agrega un comentario..."
-            style="width:100%;background:#fff;border:1.5px solid #E8E6E1;border-radius:10px;padding:11px 14px;color:#1a1a1a;font-size:14px;resize:none;height:72px;outline:none;">${esc(form.nota)}</textarea>
-        </div>
-
-        <div style="display:flex;gap:10px;margin-bottom:16px;">
-          <div style="flex:1;">
-            <label style="${LBL}">Monto</label>
-            <input id="f-monto" type="text" inputmode="numeric" value="${form.monto?Number(form.monto).toLocaleString("es-CO"):""}"
-              oninput="formatMonto(this)" placeholder="${S.form.moneda==='COP'?'0':'0.00'}" style="${INP}" />
-          </div>
-          <div style="flex:1;">
-            <label style="${LBL}">Fecha</label>
-            <input type="date" value="${form.fecha}" onchange="S.form.fecha=this.value"
-              style="${INP}color-scheme:light;" />
-          </div>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="${LBL}">Moneda</label>
-          <div style="display:flex;gap:6px;">
-            ${MONEDAS.map(m=>`
-              <button onclick="syncForm();S.form.moneda='${m.id}';render()" style="flex:1;padding:9px 0;border-radius:10px;font-size:13px;font-weight:500;background:${form.moneda===m.id?"#1a1a1a":"#F7F6F3"};color:${form.moneda===m.id?"#fff":"#777"};border:1.5px solid ${form.moneda===m.id?"#1a1a1a":"#E8E6E1"};">
-                ${m.label}
-              </button>`).join("")}
-          </div>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="${LBL}">${form.tipo==="gasto"?"Medio de pago":form.tipo==="movimiento"?"Cuenta origen":"Cuenta que recibe"}</label>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            ${cuentas.map(c=>`
-              <button onclick="syncForm();S.form.cuenta='${c.id}';render()" style="padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:left;background:${form.cuenta===c.id?c.color+"14":"#F7F6F3"};color:${form.cuenta===c.id?c.color:"#555"};border:1.5px solid ${form.cuenta===c.id?c.color+"55":"#E8E6E1"};">
-                ${c.label}
-              </button>`).join("")}
-          </div>
-        </div>
-
-        ${form.tipo==='movimiento' ? `
-        <div style="margin-bottom:16px;">
-          <label style="${LBL}">Cuenta destino</label>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            ${[...CUENTAS_GASTO, ...CUENTAS_INGRESO.filter(x=>!CUENTAS_GASTO.find(g=>g.id===x.id))].map(c=>`
-              <button onclick="syncForm();S.form.cuentaDestino='${c.id}';render()" style="padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:left;background:${form.cuentaDestino===c.id?c.color+'14':'#F7F6F3'};color:${form.cuentaDestino===c.id?c.color:'#555'};border:1.5px solid ${form.cuentaDestino===c.id?c.color+'55':"#E8E6E1"};">
-                ${c.label}
-              </button>`).join("")}
-          </div>
-        </div>` : ""}
-
-        ${form.cuenta==='otro' ? `
-        <div style="margin-bottom:16px;">
-          <input id="f-cuentaOtro" type="text" value="${esc(form.cuentaOtro)}" oninput="S.form.cuentaOtro=this.value"
-            placeholder="" style="${INP}" />
-        </div>` : ""}
-
-        <div onclick="syncForm();S.form.release=!S.form.release;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:12px 14px;border-radius:10px;margin-bottom:12px;background:${form.release?"#E8760A14":"#F7F6F3"};border:1.5px solid ${form.release?"#E8760A55":"#E8E6E1"};">
-          <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.release?"#E8760A":"#D8D5CE"};position:relative;">
-            <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.release?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
-          </div>
-          <p style="font-size:13px;font-weight:500;color:${form.release?"#E8760A":"#888"};">Release</p>
-        </div>
-
-        <div onclick="syncForm();S.form.splitwise=!S.form.splitwise;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:12px 14px;border-radius:10px;margin-bottom:16px;background:${form.splitwise?"#FFF8E8":"#F7F6F3"};border:1.5px solid ${form.splitwise?"#E8C84A":"#E8E6E1"};">
-          <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.splitwise?"#E8C84A":"#D8D5CE"};position:relative;">
-            <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.splitwise?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
-          </div>
-          <p style="font-size:13px;font-weight:500;color:${form.splitwise?"#A0862A":"#888"};">Poner en Splitwise</p>
-        </div>
-
-        <div onclick="syncForm();S.form.esInterno=!S.form.esInterno;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:10px;background:${form.esInterno?"#E3F2FD":"#F7F6F3"};border:1.5px solid ${form.esInterno?"#90CAF9":"#E8E6E1"};">
-          <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.esInterno?"#64B5F6":"#D8D5CE"};position:relative;">
-            <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.esInterno?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
-          </div>
-          <div>
-            <p style="font-size:13px;font-weight:500;color:${form.esInterno?"#1565C0":"#888"};">Movimiento interno</p>
-            <p style="font-size:11px;color:#bbb;margin-top:1px;">Pago TC, traslado entre cuentas. No aparece en reportes.</p>
-          </div>
-        </div>
-
-        <div onclick="syncForm();S.form.esProyectoApto=!S.form.esProyectoApto;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:16px;background:${form.esProyectoApto?"#F3E5F5":"#F7F6F3"};border:1.5px solid ${form.esProyectoApto?"#CE93D8":"#E8E6E1"};">
-          <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.esProyectoApto?"#BA68C8":"#D8D5CE"};position:relative;">
-            <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.esProyectoApto?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
-          </div>
-          <div>
-            <p style="font-size:13px;font-weight:500;color:${form.esProyectoApto?"#6A1B9A":"#888"};">Proyecto Apartamento</p>
-            <p style="font-size:11px;color:#bbb;margin-top:1px;">Cuotas, escrituración, remodelación.</p>
-          </div>
-        </div>
-
-        ${form.tipo === 'ingreso' ? `
-        <div onclick="syncForm();S.form.esTrimestral=!S.form.esTrimestral;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:10px;background:${form.esTrimestral?"#E8F5E9":"#F7F6F3"};border:1.5px solid ${form.esTrimestral?"#A5D6A7":"#E8E6E1"};">
-          <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.esTrimestral?"#66BB6A":"#D8D5CE"};position:relative;">
-            <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.esTrimestral?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
-          </div>
-          <div>
-            <p style="font-size:13px;font-weight:500;color:${form.esTrimestral?"#2E7D32":"#888"};">Trimestral (÷3 en 3 meses)</p>
-            <p style="font-size:11px;color:#bbb;margin-top:1px;">Se distribuye en el mes de registro y los 2 siguientes.</p>
-          </div>
-        </div>` : ""}
-
-        <button id="btn-guardar" onclick="${S.editandoId?'accionActualizar':'accionGuardar'}()" style="width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:600;background:${form.descripcion&&form.monto?"#1a1a1a":"#E8E6E1"};color:${form.descripcion&&form.monto?"#fff":"#aaa"};">
-          ${S.editandoId?"Guardar cambios":"Guardar "+tab}
-        </button>
-      </div>` : ""}
-
-      <!-- RECORDATORIOS -->
-      ${S.seccion==='recordatorios' ? renderRecordatorios() : ''}
-
-      <!-- FILTROS (solo en registros) -->
-      ${S.seccion!=='registros' ? '' : ''}
       <!-- FILTROS -->
-      ${S.seccion==='registros'?`<div style="margin-top:20px;">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Internos"],["sin-categoria","Sin categoría"],["sw-sin-tipo","SW sin tipo"]].map(([v,l])=>`
-            <button onclick="S.filtro='${v}';render()" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1"};">
-              ${l}
-            </button>`).join("")}
-        </div>
-        ${(() => {
-          const cats = [...new Set(S.registros.filter(r=>filtro==="todos"||r.tipo===filtro).map(r=>r.categoria).filter(Boolean))].sort();
-          if (!cats.length) return "";
-          return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid #E8E6E1;">
-            <button onclick="S.filtroCategoria='';render()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;background:${S.filtroCategoria===''?"#1a1a1a":"transparent"};color:${S.filtroCategoria===''?"#fff":"#999"};border:1.5px solid ${S.filtroCategoria===''?"#1a1a1a":"#E8E6E1"};">Todas</button>
-            ${cats.map(cat=>`<button onclick="S.filtroCategoria='${cat.replace(/'/g,"\\'")}';render()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;background:${S.filtroCategoria===cat?"#1a1a1a":"transparent"};color:${S.filtroCategoria===cat?"#fff":"#999"};border:1.5px solid ${S.filtroCategoria===cat?"#1a1a1a":"#E8E6E1"};">${cat}</button>`).join("")}
-          </div>`;
-        })()}
+      <div style="display:flex;gap:6px;margin-top:20px;flex-wrap:wrap;">
+        ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Internos"],["sin-categoria","Sin categoría"]].map(([v,l])=>`
+          <button onclick="S.filtro='${v}';render()" style="padding:6px 12px;border-radius:20px;font-size:11px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1'};">${l}</button>`).join("")}
       </div>
 
-      <!-- LISTA -->
-      <div style="margin-top:12px;display:flex;flex-direction:column;gap:1px;">
-        ${lista.length===0
-          ? `<div style="text-align:center;padding:48px 0;"><p style="font-size:13px;color:#ccc;font-weight:500;">Sin registros</p></div>`
-          : lista.map((r,i) => {
-              const info = getCuenta(r.cuenta, r.tipo);
-              const esGasto = r.tipo==="gasto";
-              const mon = getMoneda(r.moneda);
-              const isFirst = i===0, isLast = i===lista.length-1;
-              const rad = `${isFirst?"12px 12px":"4px 4px"} ${isLast?"12px 12px":"4px 4px"}`;
-              return `
-              <div class="row" style="background:${r.enExcel?"#fafafa":r.tipo==="movimiento"?"#fafafa":"#fff"};border-radius:${rad};padding:14px 16px;display:flex;align-items:center;gap:14px;opacity:${r.enExcel?"0.6":r.tipo==="movimiento"?"0.6":"1"};">
-                <div style="width:3px;height:36px;border-radius:2px;flex-shrink:0;background:${r.tipo==="movimiento"?"#AAAAAA":esGasto?"#D94F3D":"#3DAD7F"};${r.enExcel?"opacity:0.4":""}"></div>
-                <div style="flex:1;min-width:0;">
-                  <p style="font-size:15px;font-weight:600;color:${r.enExcel?"#aaa":r.tipo==="movimiento"?"#999":"#1a1a1a"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.enExcel?"text-decoration:line-through":""}">${esc(r.descripcion)}</p>
-                  <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
-                    <span style="font-size:11px;font-weight:500;color:${r.tipo==="movimiento"?"#aaa":(info.color||"#888")};background:${r.tipo==="movimiento"?"#aaaaaa18":(info.color||"#888")+"14"};padding:2px 8px;border-radius:20px;">${r.cuenta==="otro"&&r.cuentaOtro?r.cuentaOtro:(info.label||"")}</span>
-                    <span style="font-size:11px;color:#bbb;">${formatFecha(r.fecha)}</span>
-                  </div>
-                  ${r.categoria?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#666;background:#66666610;border:1px solid #66666620;padding:2px 9px;border-radius:20px;">${esc(r.categoria)}</span></div>`:""}
-                  ${(r.splitwise||r.release)?`<div style="display:flex;align-items:center;gap:6px;margin-top:5px;">
-                    ${r.splitwise?`<span onclick="accionToggleSplitwise(${r.id})" style="cursor:pointer;font-size:11px;font-weight:500;color:${r.splitwiseDone?'#3DAD7F':'#A0862A'};background:${r.splitwiseDone?'#3DAD7F14':'#FFF3C4'};padding:2px 8px;border-radius:20px;text-decoration:${r.splitwiseDone?'line-through':'none'};">${r.splitwiseDone?'✓ Splitwise':'Splitwise'}</span>`:''}
-                    ${r.release?`<span style="font-size:11px;font-weight:500;color:#E8760A;background:#E8760A14;padding:2px 8px;border-radius:20px;">Release</span>`:''}
-                  </div>`:''}
-                  <div style="display:none;">
-                  </div>
-                  ${r.tipo==="movimiento"?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#888;background:#88888814;padding:2px 8px;border-radius:20px;">Interno</span></div>`:""}
-                  ${r.esInterno?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#1565C0;background:#E3F2FD;padding:2px 9px;border-radius:20px;">Mvto. Interno</span></div>`:""}
-                  ${r.esProyectoApto?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#6A1B9A;background:#F3E5F5;padding:2px 9px;border-radius:20px;">Apto</span></div>`:""}
-                  ${r.nota?`<p style="font-size:13px;color:#999;margin-top:6px;line-height:1.45;font-style:italic;">${esc(r.nota)}</p>`:""}
-                </div>
-                <div style="text-align:right;flex-shrink:0;">
-                  <p style="font-size:16px;font-weight:700;color:${r.tipo==="movimiento"?"#bbb":esGasto?"#D94F3D":"#3DAD7F"};">${esGasto?"−":r.tipo==="movimiento"?"":"+"}${mon.simbolo}${r.moneda==="COP"?Number(r.monto).toLocaleString("es-CO"):Number(r.monto).toLocaleString("en-US")}</p>
-                  ${eliminarId===r.id
-                    ? `<div style="display:flex;gap:5px;margin-top:6px;justify-content:flex-end;">
-                        <button onclick="accionEliminar(${r.id})" style="font-size:11px;font-weight:600;color:#D94F3D;background:#D94F3D14;border-radius:6px;padding:3px 9px;">Eliminar</button>
-                        <button onclick="S.eliminarId=null;render()" style="font-size:11px;color:#999;background:#F0EDE8;border-radius:6px;padding:3px 9px;">Cancelar</button>
-                      </div>`
-                    : `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-                        <button onclick="S.eliminarId=${r.id};render()" style="font-size:16px;color:#ddd;line-height:1;">×</button>
-                        <button onclick="accionEditar(${r.id})" style="font-size:11px;color:#bbb;font-weight:500;background:#F0EDE8;border-radius:6px;padding:2px 8px;">editar</button>
-                        ${r.tipo!=="movimiento"?`<button onclick="accionToggleExcel(${r.id})" style="font-size:11px;font-weight:500;border-radius:6px;padding:2px 8px;${r.enExcel?"color:#3DAD7F;background:#3DAD7F14;":"color:#bbb;background:#F0EDE8;"}">${r.enExcel?"✓ Excel":"Excel"}</button>`:""}
-                      </div>`}
-                </div>
-              </div>`;
-            }).join("")}
-      </div>`:""}    </div>
+      <!-- LISTA POR MES -->
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:12px;">
+        ${mesesOrdenados.length===0
+          ? `<p style="text-align:center;padding:48px 0;font-size:13px;color:#ccc;">Sin registros</p>`
+          : mesesOrdenados.map(k => renderMes(k, grupos[k], eliminarId)).join("")}
+      </div>
+    </div>
   </div>`;
 }
 
-// ── Acciones ────────────────────────────────────────────────────────────
-function syncFormRec() {
-  if (!S.formRec) return;
-  const d=document.getElementById("fr-desc"), m=document.getElementById("fr-monto"), n=document.getElementById("fr-nota");
-  if(d) S.formRec.descripcion=d.value;
-  if(m) S.formRec.monto=m.value.replace(/\./g,"").replace(/\D/g,"");
-  if(n) S.formRec.nota=n.value;
-}
-function formatMontoRec(el) {
-  const raw=el.value.replace(/\D/g,"");
-  S.formRec.monto=raw;
-  el.value=raw?Number(raw).toLocaleString("es-CO"):"";
-}
-function accionCancelarRec() { S.formRec=null; S.editandoRecId=null; render(); }
-function accionEditarRec(id) {
-  const r=S.recordatorios.find(x=>x.id===id);
-  if(!r) return;
-  S.formRec={tipo:r.tipo,descripcion:r.descripcion||"",nota:r.nota||"",monto:String(r.monto||""),moneda:r.moneda||"COP",fecha_limite:r.fecha_limite||hoy(),pagado:r.pagado||false};
-  S.editandoRecId=id;
-  render();
-}
-async function accionMarcarPagado(id) {
-  try {
-    await dbActualizarRec(id, {pagado:true});
-    S.recordatorios=S.recordatorios.map(r=>r.id===id?{...r,pagado:true}:r);
-    render();
-  } catch(e){ alert("Error: "+e.message); }
-}
-async function accionGuardarRec() {
-  syncFormRec();
-  const f=S.formRec;
-  if(!f.descripcion||!f.monto){ alert("Completa descripción y monto"); return; }
-  const obj={tipo:f.tipo,descripcion:f.descripcion,nota:f.nota,monto:parseFloat(f.monto),moneda:f.moneda,fecha_limite:f.fecha_limite,pagado:false};
-  try {
-    if(S.editandoRecId) {
-      await dbActualizarRec(S.editandoRecId, obj);
-      S.recordatorios=S.recordatorios.map(r=>r.id===S.editandoRecId?{...r,...obj}:r);
-      S.editandoRecId=null;
-    } else {
-      const guardado=await dbGuardarRec(obj);
-      if(guardado) S.recordatorios.push(guardado);
-    }
-    S.formRec=null;
-    render();
-  } catch(e){ alert("Error al guardar: "+e.message); }
-}
-async function accionReactivarRec(id) {
-  try {
-    await dbActualizarRec(id, {pagado: false});
-    S.recordatorios = S.recordatorios.map(r => r.id===id ? {...r, pagado:false} : r);
-    render();
-  } catch(e) { alert("Error: " + e.message); }
-}
-async function accionEliminarRec(id) {
-  try {
-    await dbEliminarRec(id);
-    S.recordatorios=S.recordatorios.filter(r=>r.id!==id);
-    S.eliminarRecId=null;
-    render();
-  } catch(e){ alert("Error: "+e.message); }
-}
-async function cargarRec() {
-  try { S.recordatorios=await dbCargarRec()||[]; render(); } catch(e){ S.recordatorios=[]; render(); }
-}
-async function accionToggleSplitwise(id) {
-  const r = S.registros.find(x => x.id === id);
-  if (!r) return;
-  const nuevoValor = !r.splitwiseDone;
-  try {
-    await xhr("PATCH", API + "?id=eq." + id + "&apikey=" + SUPABASE_KEY, { splitwiseDone: nuevoValor });
-    S.registros = S.registros.map(x => x.id === id ? {...x, splitwiseDone: nuevoValor} : x);
-    render();
-  } catch(e) { alert("Error: " + e.message); }
-}
-
-async function accionToggleExcel(id) {
-  const r = S.registros.find(x => x.id === id);
-  if (!r) return;
-  const nuevoValor = !r.enExcel;
-  try {
-    await xhr("PATCH", API + "?id=eq." + id + "&apikey=" + SUPABASE_KEY, { enExcel: nuevoValor });
-    S.registros = S.registros.map(x => x.id === id ? {...x, enExcel: nuevoValor} : x);
-    render();
-  } catch(e) { alert("Error: " + e.message); }
-}
-
-function calcularMiParte() {
-  const raw = String(S.form.montoTotalSplit||"").replace(/\./g,"").replace(/\D/g,"");
-  if (!raw) return;
-  const total = parseFloat(raw);
-  const t = S.form.splitwiseTipo;
-  const div = t==="Coshitas"?2:t==="Familia mitades"?2:t==="Familia cuartos"?4:8;
-  S.form.monto = String(Math.round(total/div));
-  // Update monto input
-  const fm = document.getElementById("f-monto");
-  if (fm) fm.value = Number(S.form.monto).toLocaleString("es-CO");
-  actualizarBtn();
-}
-function onTotalSplitInput(el) {
-  const raw = el.value.replace(/\D/g,"");
-  S.form.montoTotalSplit = raw;
-  el.value = raw ? Number(raw).toLocaleString("es-CO") : "";
-  calcularMiParte();
-}
-
-
-function setCustomSplit(persona, rawVal) {
-  const num = parseFloat(rawVal.replace(/\./g,"").replace(/\D/g,"")) || 0;
-  if (!S.form.splitCustom) S.form.splitCustom = {};
-  if (num) S.form.splitCustom[persona] = num;
-  else delete S.form.splitCustom[persona];
-  // Update monto = Isa's part
-  if (S.form.splitCustom["Isa"]) {
-    S.form.monto = String(S.form.splitCustom["Isa"]);
-    const fm = document.getElementById("f-monto");
-    if (fm) fm.value = Number(S.form.splitCustom["Isa"]).toLocaleString("es-CO");
-  }
-  // Update total display without full re-render
-  const totalEl = document.querySelector("#custom-split-table + p");
-  const total = Object.values(S.form.splitCustom||{}).reduce((a,b)=>a+(parseFloat(b)||0),0);
-  if (totalEl) totalEl.textContent = "Total asignado: $" + total.toLocaleString("es-CO");
-  actualizarBtn();
-}
-
-function getCatList() {
-  const tipo = S.form.tipo;
-  return tipo === "ingreso" ? CATS_INGRESO : CATS_GASTO;
-}
-
-function filtrarCats(q) {
-  S.catBusqueda = q;
-  const dd = document.getElementById("f-cat-dropdown");
-  if (!dd) return;
-  const cats = getCatList().filter(c => c.toLowerCase().includes(q.toLowerCase()));
-  if (!cats.length || !q) { dd.style.display = "none"; return; }
-  dd.style.display = "block";
-  dd.innerHTML = cats.map(c =>
-    `<div onclick="seleccionarCat('${c.replace(/'/g,"\'")}')" style="padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #F0EDE8;" onmouseover="this.style.background='#F7F6F3'" onmouseout="this.style.background=''">${c}</div>`
-  ).join("");
-}
-
-function mostrarDropdownCat() {
-  const inp = document.getElementById("f-cat-input");
-  if (inp) filtrarCats(inp.value || "");
-  // Show all if empty
-  const dd = document.getElementById("f-cat-dropdown");
-  if (!dd) return;
-  const q = (inp ? inp.value : "") || "";
-  const cats = getCatList().filter(c => !q || c.toLowerCase().includes(q.toLowerCase()));
-  if (!cats.length) { dd.style.display = "none"; return; }
-  dd.style.display = "block";
-  dd.innerHTML = cats.map(c =>
-    `<div onclick="seleccionarCat('${c.replace(/'/g,"\'")}')" style="padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #F0EDE8;" onmouseover="this.style.background='#F7F6F3'" onmouseout="this.style.background=''">${c}</div>`
-  ).join("");
-}
-
-function seleccionarCat(cat) {
-  S.form.categoria = cat;
-  S.catBusqueda = cat;
-  const inp = document.getElementById("f-cat-input");
-  if (inp) inp.value = cat;
-  const dd = document.getElementById("f-cat-dropdown");
-  if (dd) dd.style.display = "none";
-}
-
-// Auto-suggest on description change
-const REGEX_INTERNO = /pago tc|compra banco davivienda sa|traslado fic|transferencia a titulos|cta ahorros a fic|fic a cta|nequi a rappi|rappi.*nequi|nubank a pibank|constituc.*cdt|redenc.*cdt/i;
-
-function onDescInput(el) {
-  S.form.descripcion = el.value;
-  if (!S.form.categoria) {
-    const sugerida = autoCategoria(el.value);
-    if (sugerida) {
-      S.form.categoria = sugerida;
-      const ci = document.getElementById("f-cat-input");
-      if (ci) ci.value = sugerida;
-    }
-  }
-  // Auto-detect esInterno
-  if (REGEX_INTERNO.test(el.value)) {
-    S.form.esInterno = true;
-    render();
-  }
-  actualizarBtn();
-}
-
-
-const TRM_USD_COP = 3236.66;
-const EUR_USD   = 1.10;
-const GBP_USD   = 1.27;
-
-function convertirCOP(monto, moneda) {
-  if (!monto) return 0;
-  const m = parseFloat(monto);
-  if (moneda === 'USD') return Math.round(m * TRM_USD_COP);
-  if (moneda === 'EUR') return Math.round(m * EUR_USD * TRM_USD_COP);
-  if (moneda === 'GBP') return Math.round(m * GBP_USD * TRM_USD_COP);
-  return Math.round(m);
-}
-
-function prefijoCOP(monto, moneda) {
-  if (!moneda || moneda === 'COP') return '';
-  const tasas = { USD: `TRM ${TRM_USD_COP}`, EUR: `EUR→USD ${EUR_USD} × TRM ${TRM_USD_COP}`, GBP: `GBP→USD ${GBP_USD} × TRM ${TRM_USD_COP}` };
-  return `[${moneda} ${monto} @ ${tasas[moneda]||moneda}] `;
-}
-
-const CUENTA_LABELS = {
-  "davi-td": "Cta ahorros Davivienda",
-  "davi-tc": "Davi TC",
-  "rappi-tc": "Rappi TC",
-  "nequi": "Nequi",
-  "nubank": "NuBank",
-  "daviplata": "Daviplata",
-  "efectivo": "Efectivo",
-  "fic": "Corredores",
-  "splitwise": "Splitwise",
-  "otro": ""
-};
-const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-
-function splitDivisor(tipo) {
-  const t = (tipo||"").toLowerCase();
-  if (t.includes("cuartos") && t.includes("coshitas")) return 8;
-  if (t.includes("cuartos")) return 4;
-  if (t.includes("mitades")) return 2;
-  if (t.includes("coshitas")) return 2;
-  return 1; // unknown type: export as-is
-}
-
-function miParteSplit(r) {
-  // If montoTotalSplit is set, use it; otherwise monto is the total
-  const total = r.montoTotalSplit || r.monto;
-  const div = splitDivisor(r.splitwiseTipo);
-  return Math.round(total / div);
-}
-
-function cuentaLabel(r) {
-  if (r.cuenta === 'fic') return "Corredores";
-  if (r.splitwise) {
-    const t = (r.splitwiseTipo || "").toLowerCase();
-    if (t.includes("familia")) return "Splitwise Familia";
-    return "Splitwise Coshitas";
-  }
-  if (r.cuenta === "otro" && r.cuentaOtro) {
-    const co = r.cuentaOtro.trim();
-    if (co === "Pibank") return "Pibank";
-    if (co === "RappiCuenta") return "RappiCuenta";
-    if (co === "Bolsillo Rappipay") return "Bolsillo Rappipay";
-    return co;
-  }
-  const OVERRIDES = {"nubank":"NuBank","davi-tc":"Davi TC","davi-td":"Cta ahorros Davivienda","rappi-tc":"Rappi TC","nequi":"Nequi","fic":"Corredores","efectivo":"Efectivo","daviplata":"Daviplata"};
-  return OVERRIDES[r.cuenta] || CUENTA_LABELS[r.cuenta] || r.cuenta || "";
-}
-
-function notaExport(r) {
-  let nota = r.nota || "";
-  if (r.splitwise) {
-    const t = (r.splitwiseTipo || "").toLowerCase();
-    const etiq = t.includes("familia") ? "Splitwise Familia" : "Splitwise Coshitas";
-    const div = splitDivisor(r.splitwiseTipo);
-    const total = r.montoTotalSplit || r.monto;
-    const detalle = `${etiq} (${total.toLocaleString("es-CO")} ÷ ${div})`;
-    nota = nota ? detalle + " — " + nota : detalle;
-  }
-  return nota;
-}
-
-function fechaCorta(f) {
-  if (!f) return "";
-  const [y,m,d] = f.split("-");
-  return parseInt(d) + "-" + MESES[parseInt(m)-1];
-}
-
-// generarCSV replaced by generarCSVEgresos and generarCSVIngresos
-
-function descargarCSV(contenido, nombre) {
-  const blob = new Blob(["\uFEFF" + contenido], {type:"text/tab-separated-values;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = nombre; a.click();
-  URL.revokeObjectURL(url);
-}
-
-function mostrarExport() {
-  const ahora = new Date();
-  const mesActual = ahora.getMonth();
-  const anioActual = ahora.getFullYear();
-  
-  // Build modal HTML
-  const mesesOpts = MESES.map((m,i) => 
-    `<option value="${i}" ${i===mesActual?"selected":""}>${m}</option>`
-  ).join("");
-  
-  const modal = document.createElement("div");
-  modal.id = "export-modal";
-  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;";
-  modal.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.15);">
-      <p style="font-size:17px;font-weight:700;color:#1a1a1a;margin-bottom:16px;">Exportar CSV</p>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:11px;font-weight:500;color:#999;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">Mes</label>
-        <select id="exp-mes" style="width:100%;padding:10px 14px;border:1.5px solid #E8E6E1;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;">${mesesOpts}</select>
+function renderMes(k, movs, eliminarId) {
+  const archivado = S.mesesArchivados.has(k);
+  const colapsado = S.mesesColapsados.has(k);
+  const label = mesLabel(k);
+  return `
+  <div>
+    <div class="mes-header" onclick="toggleMes('${k}')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13px;font-weight:600;color:${archivado?"#bbb":"#1a1a1a"};">${label}</span>
+        <span style="font-size:11px;color:#ccc;">${movs.length} movs</span>
+        ${archivado ? `<span style="font-size:10px;color:#bbb;background:#F0EDE8;padding:2px 7px;border-radius:10px;">Archivado</span>` : ""}
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:11px;font-weight:500;color:#999;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">Año</label>
-        <input id="exp-anio" type="number" value="${anioActual}" style="width:100%;padding:10px 14px;border:1.5px solid #E8E6E1;border-radius:10px;font-size:14px;font-family:Inter,sans-serif;outline:none;" />
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="event.stopPropagation();accionArchivarMes('${k}')" style="font-size:11px;color:${archivado?"#3DAD7F":"#bbb"};background:${archivado?"#3DAD7F14":"#F0EDE8"};border-radius:8px;padding:3px 10px;font-weight:500;">
+          ${archivado?"✓ Archivado":"Archivar"}
+        </button>
+        <span style="font-size:16px;color:#ccc;">${colapsado?"▸":"▾"}</span>
       </div>
-      <div style="margin-bottom:16px;">
-        <label style="font-size:11px;font-weight:500;color:#999;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">Tipo</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${["Todos","Gastos","Ingresos"].map(t=>`<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" id="exp-${t.toLowerCase()}" checked style="width:14px;height:14px;"> ${t}</label>`).join("")}
-        </div>
+    </div>
+    ${colapsado ? "" : `
+    <div style="display:flex;flex-direction:column;gap:1px;">
+      ${movs.map((r,i) => {
+        const archivadoMes = S.mesesArchivados.has(mesKey(r.fecha));
+        const bloqueado = archivadoMes;
+        const info = getCuenta(r.cuenta, r.tipo);
+        const esGasto = r.tipo==="gasto";
+        const esInt = r.tipo==="movimiento";
+        const isFirst=i===0, isLast=i===movs.length-1;
+        const rad = isFirst&&isLast?"12px":isFirst?"12px 12px 4px 4px":isLast?"4px 4px 12px 12px":"4px";
+        const bgColor = esInt ? "#fafafa" : r.enExcel ? "#fafafa" : "#fff";
+        const opacity = esInt ? "0.65" : r.enExcel ? "0.6" : "1";
+        const barColor = esInt ? "#AAAAAA" : esGasto ? "#D94F3D" : "#3DAD7F";
+        const montoColor = esInt ? "#aaa" : esGasto ? "#D94F3D" : "#3DAD7F";
+        const cuentaLabel = r.cuenta==="otro"&&r.cuentaOtro ? r.cuentaOtro : (info.label||"");
+        const cuentaColor = esInt ? "#aaa" : (info.color||"#888");
+        return `
+        <div class="row" style="background:${bgColor};border-radius:${rad};padding:13px 15px;display:flex;align-items:flex-start;gap:12px;opacity:${opacity};">
+          <div style="width:3px;min-height:36px;border-radius:2px;flex-shrink:0;background:${barColor};margin-top:2px;"></div>
+          <div style="flex:1;min-width:0;">
+            <p style="font-size:15px;font-weight:600;color:${r.enExcel?"#aaa":"#1a1a1a"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.enExcel?"text-decoration:line-through":""}">${esc(r.descripcion)}</p>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:500;color:${cuentaColor};background:${cuentaColor}14;padding:2px 8px;border-radius:20px;">${esc(cuentaLabel)}</span>
+              <span style="font-size:11px;color:#bbb;">${formatFecha(r.fecha)}</span>
+              ${r.moneda&&r.moneda!=="COP"?`<span style="font-size:11px;color:#888;font-weight:500;">${r.moneda}</span>`:""}
+            </div>
+            ${r.categoria?`<div style="margin-top:4px;"><span style="font-size:11px;color:#666;background:#66666610;border:1px solid #66666620;padding:2px 9px;border-radius:20px;">${esc(r.categoria)}</span></div>`:""}
+            ${r.splitwise?`<div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:500;color:${r.splitwiseDone?"#3DAD7F":"#A0862A"};background:${r.splitwiseDone?"#3DAD7F14":"#FFF3C4"};padding:2px 8px;border-radius:20px;cursor:pointer;text-decoration:${r.splitwiseDone?"line-through":"none"};" onclick="accionToggleSplitwise(${r.id})">
+                ${r.splitwiseDone?"✓ ":""}SW${r.splitwiseRegla?" · "+r.splitwiseRegla:""}${r.splitwiseConQuien?" con "+r.splitwiseConQuien:""}
+              </span>
+            </div>`:""}
+            ${r.release?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#E8760A;background:#E8760A14;padding:2px 9px;border-radius:20px;">Release</span></div>`:""}
+            ${r.esProyectoApto?`<div style="margin-top:4px;"><span style="font-size:11px;font-weight:500;color:#6A1B9A;background:#F3E5F5;padding:2px 9px;border-radius:20px;">Apto</span></div>`:""}
+            ${r.nota?`<p style="font-size:13px;color:#999;margin-top:6px;line-height:1.45;font-style:italic;">${esc(r.nota)}</p>`:""}
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <p style="font-size:16px;font-weight:700;color:${montoColor};">${esGasto?"−":esInt?"":"+"}${Number(r.monto).toLocaleString("es-CO")}${r.moneda&&r.moneda!=="COP"?" "+r.moneda:""}</p>
+            ${eliminarId===r.id
+              ? `<div style="display:flex;gap:5px;margin-top:5px;justify-content:flex-end;">
+                  <button onclick="accionEliminar(${r.id})" style="font-size:11px;font-weight:600;color:#D94F3D;background:#D94F3D14;border-radius:6px;padding:3px 9px;">Eliminar</button>
+                  <button onclick="S.eliminarId=null;render()" style="font-size:11px;color:#999;background:#F0EDE8;border-radius:6px;padding:3px 9px;">Cancelar</button>
+                </div>`
+              : `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:4px;">
+                  <button onclick="S.eliminarId=${r.id};render()" style="font-size:16px;color:#ddd;">×</button>
+                  ${!bloqueado?`<button onclick="accionEditar(${r.id})" style="font-size:11px;color:#bbb;font-weight:500;background:#F0EDE8;border-radius:6px;padding:2px 8px;">editar</button>`:""}
+                  ${!bloqueado?`<button onclick="accionToggleExcel(${r.id})" style="font-size:11px;font-weight:500;border-radius:6px;padding:2px 8px;${r.enExcel?"color:#3DAD7F;background:#3DAD7F14;":"color:#bbb;background:#F0EDE8;"}">${r.enExcel?"✓ Excel":"Excel"}</button>`:""}
+                </div>`}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>`}
+  </div>`;
+}
+
+function renderForm(form, cuentas, cats) {
+  const catsFiltradas = cats.filter(c => !S.catBusqueda || c.toLowerCase().includes(S.catBusqueda.toLowerCase()));
+  return `
+  <div class="fade" style="background:#fff;border:1px solid #E8E6E1;border-radius:16px;padding:20px;margin-top:16px;">
+    <!-- Tipo -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      ${["gasto","ingreso","movimiento"].map(t=>`
+        <button onclick="syncForm();S.form.tipo='${t}';S.tab='${t}';render()" style="flex:1;padding:10px;border-radius:10px;font-size:12px;font-weight:500;background:${form.tipo===t?(t==="gasto"?"#D94F3D14":t==="ingreso"?"#3DAD7F14":"#aaa14"):"#F7F6F3"};color:${form.tipo===t?(t==="gasto"?"#D94F3D":t==="ingreso"?"#3DAD7F":"#666"):"#777"};border:1.5px solid ${form.tipo===t?(t==="gasto"?"#D94F3D55":t==="ingreso"?"#3DAD7F55":"#aaa"):"#E8E6E1"};">
+          ${t==="gasto"?"Gasto":t==="ingreso"?"Ingreso":"Interno"}
+        </button>`).join("")}
+    </div>
+
+    <!-- Descripción -->
+    <div style="margin-bottom:14px;">
+      <label style="${LBL}">Descripción</label>
+      <input id="f-desc" type="text" value="${esc(form.descripcion)}" oninput="S.form.descripcion=this.value;actualizarBtn()"
+        placeholder="Ej. Almuerzo" style="${INP}" />
+    </div>
+
+    <!-- Nota -->
+    <div style="margin-bottom:14px;">
+      <label style="${LBL}">Nota</label>
+      <textarea id="f-nota" oninput="S.form.nota=this.value" placeholder="Contexto, detalles..."
+        style="width:100%;background:#fff;border:1.5px solid #E8E6E1;border-radius:10px;padding:11px 14px;color:#1a1a1a;font-size:14px;resize:none;height:72px;outline:none;">${esc(form.nota)}</textarea>
+    </div>
+
+    <!-- Monto + Moneda + Fecha -->
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <div style="flex:2;">
+        <label style="${LBL}">Monto</label>
+        <input id="f-monto" type="text" inputmode="numeric" value="${form.monto?Number(String(form.monto).replace(/\./g,"")).toLocaleString("es-CO"):""}"
+          oninput="formatMonto(this)" placeholder="0" style="${INP}" />
       </div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="document.getElementById('export-modal').remove()" style="flex:1;padding:12px;border-radius:10px;background:#F7F6F3;color:#888;font-size:14px;font-weight:500;border:none;cursor:pointer;">Cancelar</button>
-        <button onclick="ejecutarExport()" style="flex:2;padding:12px;border-radius:10px;background:#1a1a1a;color:#fff;font-size:14px;font-weight:600;border:none;cursor:pointer;">Exportar</button>
+      <div style="flex:1;">
+        <label style="${LBL}">Moneda</label>
+        <select id="f-moneda" onchange="S.form.moneda=this.value"
+          style="${INP}padding:11px 8px;background:#fff;">
+          ${MONEDAS.map(m=>`<option value="${m}" ${form.moneda===m?"selected":""}>${m}</option>`).join("")}
+        </select>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+      <div style="flex:1.5;">
+        <label style="${LBL}">Fecha</label>
+        <input type="date" value="${form.fecha}" onchange="S.form.fecha=this.value"
+          style="${INP}color-scheme:light;" />
+      </div>
+    </div>
+
+    <!-- Cuenta -->
+    <div style="margin-bottom:14px;">
+      <label style="${LBL}">${form.tipo==="gasto"?"Medio de pago":form.tipo==="movimiento"?"Cuenta origen":"Cuenta que recibe"}</label>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${cuentas.map(c=>`
+          <button onclick="syncForm();S.form.cuenta='${c.id}';render()" style="padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:left;background:${form.cuenta===c.id?c.color+"14":"#F7F6F3"};color:${form.cuenta===c.id?c.color:"#555"};border:1.5px solid ${form.cuenta===c.id?c.color+"55":"#E8E6E1"};">
+            ${c.label}
+          </button>`).join("")}
+      </div>
+      ${form.cuenta==="otro"?`
+      <input id="f-cuenta-otro" type="text" value="${esc(form.cuentaOtro)}" oninput="S.form.cuentaOtro=this.value"
+        placeholder="¿Cuál cuenta?" style="${INP}margin-top:8px;" />`:""}
+    </div>
+
+    <!-- Categoría con búsqueda -->
+    <div style="margin-bottom:14px;position:relative;">
+      <label style="${LBL}">Categoría</label>
+      <input id="f-cat" type="text" value="${esc(form.categoria)}"
+        oninput="S.catBusqueda=this.value;S.form.categoria=this.value;renderCatDropdown()"
+        onfocus="S.catBusqueda=this.value;renderCatDropdown()"
+        placeholder="Buscar categoría..."
+        autocomplete="off"
+        style="${INP}" />
+      <div id="cat-dd" style="display:none;position:absolute;z-index:100;background:#fff;border:1.5px solid #E8E6E1;border-radius:10px;max-height:180px;overflow-y:auto;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.08);"></div>
+    </div>
+
+    <!-- Splitwise toggle -->
+    <div onclick="syncForm();S.form.splitwise=!S.form.splitwise;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:${form.splitwise?"8px":"10px"};background:${form.splitwise?"#FFF8E8":"#F7F6F3"};border:1.5px solid ${form.splitwise?"#E8C84A":"#E8E6E1"};">
+      <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.splitwise?"#E8C84A":"#D8D5CE"};position:relative;">
+        <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.splitwise?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
+      </div>
+      <p style="font-size:13px;font-weight:500;color:${form.splitwise?"#A0862A":"#888"};">Poner en Splitwise</p>
+    </div>
+
+    ${form.splitwise?`
+    <div style="background:#FFFBEF;border:1.5px solid #E8C84A44;border-radius:12px;padding:14px;margin-bottom:10px;display:flex;gap:10px;">
+      <div style="flex:1;">
+        <label style="${LBL}">Regla</label>
+        <input id="f-sw-regla" type="text" value="${esc(form.splitwiseRegla)}" oninput="S.form.splitwiseRegla=this.value"
+          placeholder="50/50, ÷4, custom..." style="${INP}font-size:13px;" />
+      </div>
+      <div style="flex:1;">
+        <label style="${LBL}">Con quién</label>
+        <input id="f-sw-quien" type="text" value="${esc(form.splitwiseConQuien)}" oninput="S.form.splitwiseConQuien=this.value"
+          placeholder="Arturo, Familia..." style="${INP}font-size:13px;" />
+      </div>
+    </div>`:""}
+
+    <!-- Release -->
+    <div onclick="syncForm();S.form.release=!S.form.release;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:10px;background:${form.release?"#FFF3E0":"#F7F6F3"};border:1.5px solid ${form.release?"#E8760A55":"#E8E6E1"};">
+      <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.release?"#E8760A":"#D8D5CE"};position:relative;">
+        <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.release?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
+      </div>
+      <p style="font-size:13px;font-weight:500;color:${form.release?"#E8760A":"#888"};">Release</p>
+    </div>
+
+    <!-- Interno + Apto -->
+    <div onclick="syncForm();S.form.esInterno=!S.form.esInterno;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:10px;background:${form.esInterno?"#E3F2FD":"#F7F6F3"};border:1.5px solid ${form.esInterno?"#90CAF9":"#E8E6E1"};">
+      <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.esInterno?"#64B5F6":"#D8D5CE"};position:relative;">
+        <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.esInterno?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
+      </div>
+      <p style="font-size:13px;font-weight:500;color:${form.esInterno?"#1565C0":"#888"};">Mvto. Interno (pago TC, traslado)</p>
+    </div>
+
+    <div onclick="syncForm();S.form.esProyectoApto=!S.form.esProyectoApto;render()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 14px;border-radius:10px;margin-bottom:16px;background:${form.esProyectoApto?"#F3E5F5":"#F7F6F3"};border:1.5px solid ${form.esProyectoApto?"#CE93D8":"#E8E6E1"};">
+      <div style="width:36px;height:20px;border-radius:10px;flex-shrink:0;background:${form.esProyectoApto?"#BA68C8":"#D8D5CE"};position:relative;">
+        <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${form.esProyectoApto?19:3}px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
+      </div>
+      <p style="font-size:13px;font-weight:500;color:${form.esProyectoApto?"#6A1B9A":"#888"};">Proyecto Apartamento</p>
+    </div>
+
+    <button id="btn-guardar" onclick="${S.editandoId?"accionActualizar":"accionGuardar"}()" style="width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:600;background:${form.descripcion&&form.monto?"#1a1a1a":"#E8E6E1"};color:${form.descripcion&&form.monto?"#fff":"#aaa"};">
+      ${S.editandoId?"Guardar cambios":"Guardar "+form.tipo}
+    </button>
+  </div>`;
 }
 
-function generarCSVEgresos(registros) {
-    function sanCell(s) { var x=String(s||""); var r=""; for(var i=0;i<x.length;i++){var cc=x.charCodeAt(i); if(cc===9||cc===10||cc===13){if(cc===10)r+=" · ";}else{r+=x[i];}} return r.trim(); }
-  const rows = registros.map(r => {
-    // 1. Convert to COP first
-    const montoCOP = convertirCOP(r.monto, r.moneda);
-    // 2. Then apply splitwise division
-    let valor;
-    if (r.splitwise) {
-      const div = splitDivisor(r.splitwiseTipo);
-      valor = Math.round(montoCOP / div);
-    } else {
-      valor = montoCOP;
-    }
-    // 3. Build nota with currency prefix for traceability (skip if already converted)
-    const notaBase = notaExport(r);
-    const yaConvertida = notaBase.includes('@ TRM') || notaBase.includes('TRM 3236');
-    const prefijo = (!yaConvertida && (r.moneda === 'USD' || r.moneda === 'EUR' || r.moneda === 'GBP')) ? prefijoCOP(r.monto, r.moneda) : '';
-    const notaFinal = prefijo ? prefijo + (notaBase ? '— ' + notaBase : '') : notaBase;
-    return [sanCell(r.descripcion), valor, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r)), sanCell(notaFinal)].join("\t");
-  });
-  return rows.join("\n");
-}
-
-function generarCSVIngresos(registros) {
-    function sanCell(s) { var x=String(s||""); var r=""; for(var i=0;i<x.length;i++){var cc=x.charCodeAt(i); if(cc===9||cc===10||cc===13){if(cc===10)r+=" · ";}else{r+=x[i];}} return r.trim(); }
-  const rows = registros.map(r => {
-    const montoCOP = convertirCOP(r.monto, r.moneda);
-    return [sanCell(r.descripcion), montoCOP, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r))].join("\t");
-  });
-  return rows.join("\n");
-}
-
-
-function quienPago(nota) {
-  if (!nota) return "Sí";
-  const n = nota.toLowerCase();
-  if (n.includes("arturo pag") || n.includes("arturo lo pag") ||
-      n.includes("mama pag") || n.includes("mamá pag") ||
-      n.includes("papa pag") || n.includes("papá pag") ||
-      n.includes("machi pag")) return "No";
-  return "Sí"; // default: yo pagué
-}
-
-function distribucionLabel(tipo) {
-  const t = (tipo||"").toLowerCase();
-  if (t.includes("cuartos") && t.includes("coshitas")) return "12.5% × 8 (Familia + Coshitas)";
-  if (t.includes("cuartos")) return "25% × 4 (Familia)";
-  if (t.includes("mitades")) return "50/50 Mamá";
-  return "50/50 Arturo"; // Coshitas
-}
-
-function distribucionTexto(r) {
-  if (r.splitCustom) {
-    const sc = typeof r.splitCustom === "string" ? JSON.parse(r.splitCustom) : r.splitCustom;
-    return Object.entries(sc).map(([k,v])=>`${k}: $${Number(v).toLocaleString("es-CO")}`).join(", ");
-  }
-  return distribucionLabel(r.splitwiseTipo);
-}
-
-function miParteSW(r, montoCOP) {
-  if (r.splitCustom) {
-    const sc = typeof r.splitCustom === "string" ? JSON.parse(r.splitCustom) : r.splitCustom;
-    return sc["Isa"] || 0;
-  }
-  return Math.round(montoCOP / splitDivisor(r.splitwiseTipo));
-}
-
-function generarCSVSplitwiseConsolidado(registros) {
-  function sanCell(s) { var x=String(s||""); var r=""; for(var i=0;i<x.length;i++){var cc=x.charCodeAt(i); if(cc===9||cc===10||cc===13){if(cc===10)r+=" · ";}else{r+=x[i];}} return r.trim(); }
-  const distLabel = {
-    "Coshitas": "50/50 Arturo",
-    "Familia mitades": "50/50 Mamá",
-    "Familia cuartos": "25% × 4 (Familia)",
-    "Familia cuartos + Coshitas": "12.5% × 8 (Familia + Coshitas)"
-  };
-  const header = ["Grupo","Fecha","Descripción","Monto Total","Pagué yo?","Distribución","Mi parte"].join("\t");
-  const rows = registros.map(r => {
-    const montoCOP = convertirCOP(r.monto, r.moneda);
-    const div = splitDivisor(r.splitwiseTipo);
-    const miParte = Math.round(montoCOP / div);
-    const nota = String(r.nota||"");
-    const pagueYo = /arturo pagó|mamá pagó|papá pagó|mama pagó|papa pagó/i.test(nota) ? "No" : "Sí";
-    const grupo = r.splitwiseTipo || "";
-    const dist = distLabel[grupo] || grupo;
-    return [grupo, fechaCorta(r.fecha), sanCell(r.descripcion), montoCOP, pagueYo, dist, miParte].join("\t");
-  });
-  return [header, ...rows].join("\n");
-}
-
-function generarCSVSplitwise(registros, tipo) {
-  function sanCell(s) { var x=String(s||""); var r=""; for(var i=0;i<x.length;i++){var cc=x.charCodeAt(i); if(cc===9||cc===10||cc===13){if(cc===10)r+=" · ";}else{r+=x[i];}} return r.trim(); }
-  const div = tipo.toLowerCase().includes("cuartos") && tipo.toLowerCase().includes("coshitas") ? 8
-             : tipo.toLowerCase().includes("cuartos") ? 4
-             : 2;
-  const rows = registros.map(r => {
-    const montoTotal = convertirCOP(r.montoTotalSplit || r.monto, r.moneda);
-    const miParte    = Math.round(montoTotal / div);
-    return [
-      fechaCorta(r.fecha),
-      sanCell(r.descripcion),
-      montoTotal,
-      quienPago(r.nota),
-      miParte,
-      distribucionLabel(r.splitwiseTipo)
-    ].join("\t");
-  });
-  return rows.join("\n");
-}
-function ejecutarExport() {
-  const mes = parseInt(document.getElementById("exp-mes").value);
-  const anio = parseInt(document.getElementById("exp-anio").value);
-  const mesStr = String(mes+1).padStart(2,"0");
-  const anioStr = String(anio);
-  const nomMes = MESES[mes]+anioStr.slice(2);
-  const enMes = r => r.fecha && r.fecha.startsWith(anioStr+"-"+mesStr);
-  const esPersonal = r => !r.esInterno && !r.release && r.tipo !== "movimiento" && !/zaida/i.test(r.descripcion||"");
-  const porFecha = (a,b) => (a.fecha||"").localeCompare(b.fecha||"");
-  const egresos  = S.registros.filter(r => enMes(r) && esPersonal(r) && r.tipo === "gasto").sort(porFecha);
-  // Expand trimestral ingresos: include movs registered in [mes-2, mes] that are trimestral
-  const ingresosBase = S.registros.filter(r => {
-    if (!esPersonal(r) || r.tipo !== "ingreso") return false;
-    if (!r.esTrimestral) return enMes(r);
-    // Check if this mes falls within the 3-month window of the mov
-    const [ry,rm] = (r.fecha||"").split("-").map(Number);
-    const mesReg  = (ry-2000)*12 + rm - 1; // 0-based months from epoch
-    const mesExp  = (parseInt(anioStr)-2000)*12 + mes; // 0-based
-    return mesExp >= mesReg && mesExp <= mesReg + 2;
-  });
-  // Expand trimestral into virtual rows
-  const ingresos = ingresosBase.flatMap(r => {
-    if (!r.esTrimestral) return [r];
-    const [ry,rm,rd] = (r.fecha||"").split("-").map(Number);
-    const mesReg = (ry-2000)*12 + rm - 1;
-    const mesExp = (parseInt(anioStr)-2000)*12 + mes;
-    const tercio = mesExp - mesReg + 1; // 1, 2, or 3
-    const mesReal = mes + 1; // 1-based
-    const diaStr  = String(rd).padStart(2,"0");
-    const anioReal = anioStr;
-    const fechaVirtual = `${anioReal}-${String(mesReal).padStart(2,"0")}-${diaStr}`;
-    return [{
-      ...r,
-      monto: Math.round(r.monto / 3),
-      descripcion: `${r.descripcion} (${tercio}/3)`,
-      fecha: fechaVirtual,
-      _virtual: true
-    }];
-  }).sort(porFecha);
-  const release  = S.registros.filter(r => enMes(r) && r.release === true && !/zaida/i.test(r.descripcion||"")).sort(porFecha);
-  let n = 0;
-  if (egresos.length)  { descargarCSV(generarCSVEgresos(egresos),   `${nomMes}_egresos.tsv`);  n++; }
-  if (ingresos.length) { descargarCSV(generarCSVIngresos(ingresos), `${nomMes}_ingresos.tsv`); n++; }
-  if (release.length)  { descargarCSV(generarCSVEgresos(release),   `${nomMes}_release.tsv`);  n++; }
-  // Splitwise TSV consolidado
-  const swMovs = S.registros.filter(r => enMes(r) && r.splitwise === true);
-  if (swMovs.length) {
-    const tipoOrder = ["Coshitas","Familia mitades","Familia cuartos","Familia cuartos + Coshitas","Custom"];
-    const swOrdenado = [...swMovs].sort((a,b) => {
-      const ta = a.splitCustom ? "Custom" : (a.splitwiseTipo||"");
-      const tb = b.splitCustom ? "Custom" : (b.splitwiseTipo||"");
-      const ia = tipoOrder.indexOf(ta), ib = tipoOrder.indexOf(tb);
-      if (ia !== ib) return ia - ib;
-      return (a.fecha||"").localeCompare(b.fecha||"");
-    });
-    descargarCSV(generarCSVSplitwiseConsolidado(swOrdenado), `${nomMes}_splitwise.tsv`);
-    n++;
-  }
-
-  document.getElementById("export-modal").remove();
-  if (!n) alert("No hay registros para ese mes y año.");
-}
-
-function accionSetTab(t) { S.tab=t; S.form=formVacio(t); S.mostrarForm=false; render(); }
-
-function accionToggleForm() {
-  S.mostrarForm = !S.mostrarForm;
-  if (S.mostrarForm) { S.form = formVacio(S.tab); S.editandoId = null; }
-  render();
-  if (S.mostrarForm) setTimeout(()=>{ const d=document.getElementById("f-desc"); if(d) d.focus(); }, 150);
-}
-
+// ── Helpers ─────────────────────────────────────────────────────────────
 function syncForm() {
-  const fd = document.getElementById("f-desc");
-  const fm = document.getElementById("f-monto");
-  const fn = document.getElementById("f-nota");
-  const fc = document.getElementById("f-cat-input");
-  if (fd) S.form.descripcion = fd.value;
-  if (fc) S.form.categoria = fc.value;
-  if (fm) {
-    if (S.form.moneda === "COP") {
-      S.form.monto = fm.value.replace(/\./g,"").replace(/\D/g,"");
-    } else {
-      S.form.monto = fm.value; // already formatted as "207.47"
-    }
-  }
-  if (fn) S.form.nota = fn.value;
-}
-
-function actualizarBtn() {
-  const btn = document.getElementById("btn-guardar");
-  if (!btn) return;
-  const ok = S.form.descripcion && S.form.monto;
-  btn.style.background = ok ? "#1a1a1a" : "#E8E6E1";
-  btn.style.color = ok ? "#fff" : "#aaa";
+  const fd=document.getElementById("f-desc"), fm=document.getElementById("f-monto"),
+        fn=document.getElementById("f-nota"), fc=document.getElementById("f-cat"),
+        fco=document.getElementById("f-cuenta-otro"),
+        fsr=document.getElementById("f-sw-regla"), fsq=document.getElementById("f-sw-quien");
+  if(fd) S.form.descripcion=fd.value;
+  if(fm) S.form.monto=fm.value.replace(/\./g,"").replace(/\D/g,"");
+  if(fn) S.form.nota=fn.value;
+  if(fc) S.form.categoria=fc.value;
+  if(fco) S.form.cuentaOtro=fco.value;
+  if(fsr) S.form.splitwiseRegla=fsr.value;
+  if(fsq) S.form.splitwiseConQuien=fsq.value;
 }
 
 function formatMonto(el) {
-  const moneda = S.form.moneda;
-  const raw = el.value.replace(/\D/g,"");
-  if (!raw) { S.form.monto = ""; el.value = ""; actualizarBtn(); return; }
-  if (moneda === "COP") {
-    S.form.monto = raw;
-    const pos = el.selectionStart, prevLen = el.value.length;
-    el.value = Number(raw).toLocaleString("es-CO");
-    try { el.setSelectionRange(pos + el.value.length - prevLen, pos + el.value.length - prevLen); } catch(e){}
-  } else {
-    // USD/EUR: auto insert 2 decimals — 20747 → 207.47
-    const num = parseInt(raw, 10);
-    const formatted = (num / 100).toFixed(2);
-    S.form.monto = formatted;
-    el.value = formatted;
-  }
+  const raw=el.value.replace(/\D/g,"");
+  S.form.monto=raw;
+  el.value=raw?Number(raw).toLocaleString("es-CO"):"";
   actualizarBtn();
 }
 
+function actualizarBtn() {
+  const btn=document.getElementById("btn-guardar"); if(!btn) return;
+  const ok=S.form.descripcion&&S.form.monto;
+  btn.style.background=ok?"#1a1a1a":"#E8E6E1";
+  btn.style.color=ok?"#fff":"#aaa";
+}
+
+function renderCatDropdown() {
+  const dd=document.getElementById("cat-dd"); if(!dd) return;
+  const cats = S.tab==="ingreso" ? CATS_INGRESO : CATS_GASTO;
+  const q=S.catBusqueda||"";
+  const filtradas=cats.filter(c=>!q||c.toLowerCase().includes(q.toLowerCase()));
+  if(!filtradas.length){dd.style.display="none";return;}
+  dd.style.display="block";
+  dd.innerHTML=filtradas.map(c=>`<div onclick="selCat('${c.replace(/'/g,"\\'")}'); " style="padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #F0EDE8;" onmouseover="this.style.background='#F7F6F3'" onmouseout="this.style.background=''">${c}</div>`).join("");
+}
+function selCat(cat) {
+  S.form.categoria=cat; S.catBusqueda=cat;
+  const i=document.getElementById("f-cat"); if(i) i.value=cat;
+  const dd=document.getElementById("cat-dd"); if(dd) dd.style.display="none";
+}
+document.addEventListener("click", e=>{ if(!e.target.closest("#cat-dd")&&e.target.id!=="f-cat"){const dd=document.getElementById("cat-dd");if(dd)dd.style.display="none";}});
+
+function toggleMes(k) {
+  if(S.mesesColapsados.has(k)) S.mesesColapsados.delete(k);
+  else S.mesesColapsados.add(k);
+  render();
+}
+
+// ── Acciones ─────────────────────────────────────────────────────────────
+function accionSetTab(t) { S.tab=t; S.form=formVacio(t); S.mostrarForm=false; render(); }
+
+function accionToggleForm() {
+  S.mostrarForm=!S.mostrarForm;
+  if(S.mostrarForm) { S.form=formVacio(S.tab); S.editandoId=null; }
+  render();
+  if(S.mostrarForm) setTimeout(()=>{const d=document.getElementById("f-desc");if(d)d.focus();},150);
+}
+
 async function accionGuardar() {
-  // Sync text fields directly from DOM
-  const fd = document.getElementById("f-desc");
-  const fm = document.getElementById("f-monto");
-  const fn = document.getElementById("f-nota");
-  if (fd) S.form.descripcion = fd.value.trim();
-  if (fm) {
-    if (S.form.moneda === "COP") {
-      S.form.monto = fm.value.replace(/\./g,"").replace(/\D/g,"");
-    } else {
-      S.form.monto = fm.value; // already formatted as "207.47"
-    }
-  }
-  if (fn) S.form.nota = fn.value.trim();
-
-  if (!S.form.descripcion || !S.form.monto) {
-    alert("Completa descripción y monto");
-    return;
-  }
-
-  const btn = document.getElementById("btn-guardar");
-  if (btn) { btn.innerText = "Guardando..."; btn.style.opacity = ".6"; btn.disabled = true; }
-
-  const co = document.getElementById("f-cuentaOtro");
-  if (co) S.form.cuentaOtro = co.value;
-
+  syncForm();
+  const f=S.form;
+  if(!f.descripcion||!f.monto){alert("Completa descripción y monto");return;}
+  const btn=document.getElementById("btn-guardar");
+  if(btn){btn.innerText="Guardando...";btn.style.opacity=".6";btn.disabled=true;}
   const obj = {
-    tipo:        S.form.tipo,
-    descripcion: S.form.descripcion,
-    nota:        S.form.nota,
-    monto:       parseFloat(S.form.monto),
-    cuenta:      S.form.cuenta,
-    cuentaDestino: S.form.cuentaDestino || "",
-    cuentaOtro:  S.form.cuentaOtro || "",
-    fecha:       S.form.fecha,
-    moneda:      S.form.moneda,
-    splitwise:   S.form.splitwise,
-    release:     S.form.release || false,
-    enExcel:     S.form.enExcel || false,
-    categoria:   S.form.categoria || "",
-    splitwiseTipo: S.form.splitwiseTipo || "Coshitas",
-    montoTotalSplit: S.form.montoTotalSplit ? parseFloat(String(S.form.montoTotalSplit).replace(/\./g,"").replace(/\D/g,"")) : null,
-    esInterno:   S.form.esInterno || false,
-    esProyectoApto: S.form.esProyectoApto || false,
-    esTrimestral: S.form.esTrimestral || false,
+    tipo:f.tipo, descripcion:f.descripcion, nota:f.nota,
+    monto:parseFloat(f.monto), cuenta:f.cuenta, cuentaOtro:f.cuentaOtro||"",
+    fecha:f.fecha, moneda:f.moneda, categoria:f.categoria||"",
+    release:f.release||false, esInterno:f.esInterno||false,
+    esProyectoApto:f.esProyectoApto||false,
+    splitwise:f.splitwise||false,
+    splitwiseRegla:f.splitwiseRegla||"", splitwiseConQuien:f.splitwiseConQuien||"",
+    enExcel:false,
   };
-
   try {
-    const guardado = await dbGuardar(obj);
-    if (guardado) S.registros.unshift(guardado);
-    S.form = formVacio(S.tab);
-    S.mostrarForm = false;
-    render();
+    const guardado=await dbGuardar(obj);
+    if(guardado) S.registros.unshift(guardado);
+    S.form=formVacio(S.tab); S.mostrarForm=false; render();
   } catch(e) {
-    alert("Error al guardar: " + e.message);
-    if (btn) { btn.innerText = "Guardar " + S.tab; btn.style.opacity = "1"; btn.disabled = false; }
+    alert("Error: "+e.message);
+    if(btn){btn.innerText="Guardar "+S.tab;btn.style.opacity="1";btn.disabled=false;}
   }
 }
 
 function accionEditar(id) {
-  const r = S.registros.find(x => x.id === id);
-  if (!r) return;
-  S.form = {
-    tipo:        r.tipo,
-    descripcion: r.descripcion || "",
-    nota:        r.nota || "",
-    monto:       String(r.monto || ""),
-    release:     r.release || false,
-    cuentaOtro:  r.cuentaOtro || "",
-    cuentaDestino: r.cuentaDestino || "davi-td",
-    enExcel:     r.enExcel || false,
-    categoria:   r.categoria || "",
-    splitwiseTipo: r.splitwiseTipo || "Coshitas",
-    montoTotalSplit: r.montoTotalSplit ? String(r.montoTotalSplit) : "",
-    splitCustom: r.splitCustom ? (typeof r.splitCustom === "string" ? JSON.parse(r.splitCustom) : r.splitCustom) : null,
-    esInterno:   r.esInterno || false,
-    esProyectoApto: r.esProyectoApto || false,
-    esTrimestral: r.esTrimestral || false,
-    cuenta:      r.cuenta || "davi-td",
-    fecha:       r.fecha || hoy(),
-    moneda:      r.moneda || "COP",
-    splitwise:   r.splitwise || false,
+  const r=S.registros.find(x=>x.id===id); if(!r) return;
+  S.form={
+    tipo:r.tipo, descripcion:r.descripcion||"", nota:r.nota||"",
+    monto:String(r.monto||""), cuenta:r.cuenta||"davi-td", cuentaOtro:r.cuentaOtro||"",
+    fecha:r.fecha||hoy(), moneda:r.moneda||"COP", categoria:r.categoria||"",
+    release:r.release||false, esInterno:r.esInterno||false,
+    esProyectoApto:r.esProyectoApto||false,
+    splitwise:r.splitwise||false,
+    splitwiseRegla:r.splitwiseRegla||"", splitwiseConQuien:r.splitwiseConQuien||"",
   };
-  S.tab = r.tipo;
-  S.editandoId = id;
-  S.mostrarForm = true;
-  S.eliminarId = null;
+  S.tab=r.tipo; S.editandoId=id; S.mostrarForm=true; S.eliminarId=null;
   render();
-  setTimeout(() => { const d = document.getElementById("f-desc"); if(d) d.focus(); }, 150);
+  setTimeout(()=>{const d=document.getElementById("f-desc");if(d)d.focus();},150);
 }
 
 async function accionActualizar() {
-  const fd = document.getElementById("f-desc");
-  const fm = document.getElementById("f-monto");
-  const fn = document.getElementById("f-nota");
-  if (fd) S.form.descripcion = fd.value.trim();
-  if (fm) {
-    if (S.form.moneda === "COP") {
-      S.form.monto = fm.value.replace(/\./g,"").replace(/\D/g,"");
-    } else {
-      S.form.monto = fm.value; // already formatted as "207.47"
-    }
-  }
-  if (fn) S.form.nota = fn.value.trim();
-
-  if (!S.form.descripcion || !S.form.monto) { alert("Completa descripción y monto"); return; }
-
-  const btn = document.getElementById("btn-guardar");
-  if (btn) { btn.innerText = "Guardando..."; btn.style.opacity = ".6"; btn.disabled = true; }
-
-  const co = document.getElementById("f-cuentaOtro");
-  if (co) S.form.cuentaOtro = co.value;
-
+  syncForm();
+  const f=S.form;
+  if(!f.descripcion||!f.monto){alert("Completa descripción y monto");return;}
+  const btn=document.getElementById("btn-guardar");
+  if(btn){btn.innerText="Guardando...";btn.style.opacity=".6";btn.disabled=true;}
   const obj = {
-    tipo:        S.form.tipo,
-    descripcion: S.form.descripcion,
-    nota:        S.form.nota,
-    monto:       parseFloat(S.form.monto),
-    cuenta:      S.form.cuenta,
-    cuentaDestino: S.form.cuentaDestino || "",
-    cuentaOtro:  S.form.cuentaOtro || "",
-    fecha:       S.form.fecha,
-    moneda:      S.form.moneda,
-    splitwise:   S.form.splitwise,
-    release:     S.form.release || false,
-    enExcel:     S.form.enExcel || false,
-    categoria:   S.form.categoria || "",
-    splitwiseTipo: S.form.splitwiseTipo || "Coshitas",
-    montoTotalSplit: S.form.montoTotalSplit ? parseFloat(String(S.form.montoTotalSplit).replace(/\./g,"").replace(/\D/g,"")) : null,
-    esInterno:   S.form.esInterno || false,
-    esProyectoApto: S.form.esProyectoApto || false,
-    esTrimestral: S.form.esTrimestral || false,
+    tipo:f.tipo, descripcion:f.descripcion, nota:f.nota,
+    monto:parseFloat(f.monto), cuenta:f.cuenta, cuentaOtro:f.cuentaOtro||"",
+    fecha:f.fecha, moneda:f.moneda, categoria:f.categoria||"",
+    release:f.release||false, esInterno:f.esInterno||false,
+    esProyectoApto:f.esProyectoApto||false,
+    splitwise:f.splitwise||false,
+    splitwiseRegla:f.splitwiseRegla||"", splitwiseConQuien:f.splitwiseConQuien||"",
   };
-
   try {
-    const actualizado = await dbActualizar(S.editandoId, obj);
-    S.registros = S.registros.map(r => r.id === S.editandoId ? {...r, ...obj} : r);
-    S.editandoId = null;
-    S.form = formVacio(S.tab);
-    S.mostrarForm = false;
-    render();
+    await dbActualizar(S.editandoId, obj);
+    S.registros=S.registros.map(r=>r.id===S.editandoId?{...r,...obj}:r);
+    S.editandoId=null; S.form=formVacio(S.tab); S.mostrarForm=false; render();
   } catch(e) {
-    alert("Error al actualizar: " + e.message);
-    if (btn) { btn.innerText = "Guardar cambios"; btn.style.opacity = "1"; btn.disabled = false; }
+    alert("Error: "+e.message);
+    if(btn){btn.innerText="Guardar cambios";btn.style.opacity="1";btn.disabled=false;}
   }
 }
 
 async function accionEliminar(id) {
   try {
     await dbEliminar(id);
-    S.registros = S.registros.filter(r => r.id !== id);
-    S.eliminarId = null;
+    S.registros=S.registros.filter(r=>r.id!==id);
+    S.eliminarId=null; render();
+  } catch(e){alert("Error: "+e.message);}
+}
+
+async function accionToggleSplitwise(id) {
+  const r=S.registros.find(x=>x.id===id); if(!r) return;
+  const v=!r.splitwiseDone;
+  try {
+    await dbActualizar(id,{splitwiseDone:v});
+    S.registros=S.registros.map(x=>x.id===id?{...x,splitwiseDone:v}:x);
     render();
-  } catch(e) {
-    alert("Error al eliminar: " + e.message);
-  }
+  } catch(e){alert("Error: "+e.message);}
 }
 
-// ── Init ────────────────────────────────────────────────────────────────
-const PWD = "164892";
-
-function mostrarLogin() {
-  document.getElementById("app").innerHTML = `
-    <div style="min-height:100vh;background:#F7F6F3;display:flex;align-items:center;justify-content:center;padding:24px;">
-      <div style="background:#fff;border-radius:16px;padding:32px 24px;width:100%;max-width:320px;border:1px solid #E8E6E1;">
-        <p style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">Finanzas</p>
-        <p style="font-size:13px;color:#bbb;margin-bottom:24px;">Ingresa tu contraseña para continuar</p>
-        <input id="inp-pwd" type="password" placeholder="Contraseña"
-          style="width:100%;background:#F7F6F3;border:1.5px solid #E8E6E1;border-radius:10px;padding:12px 14px;font-size:15px;font-family:'Inter',sans-serif;outline:none;margin-bottom:12px;"
-          onkeydown="if(event.key==='Enter') verificarPwd()" />
-        <button onclick="verificarPwd()"
-          style="width:100%;padding:13px;border-radius:10px;background:#1a1a1a;color:#fff;font-size:15px;font-weight:600;font-family:'Inter',sans-serif;border:none;cursor:pointer;">
-          Entrar
-        </button>
-        <p id="pwd-error" style="font-size:12px;color:#D94F3D;margin-top:10px;text-align:center;display:none;">Contraseña incorrecta</p>
-      </div>
-    </div>`;
-  setTimeout(() => { const i = document.getElementById("inp-pwd"); if(i) i.focus(); }, 100);
+async function accionToggleExcel(id) {
+  const r=S.registros.find(x=>x.id===id); if(!r) return;
+  const v=!r.enExcel;
+  try {
+    await dbActualizar(id,{enExcel:v});
+    S.registros=S.registros.map(x=>x.id===id?{...x,enExcel:v}:x);
+    render();
+  } catch(e){alert("Error: "+e.message);}
 }
 
-function verificarPwd() {
-  const val = document.getElementById("inp-pwd").value;
-  if (val === PWD) {
-    sessionStorage.setItem("auth", "1");
-    iniciarApp();
-  } else {
-    const err = document.getElementById("pwd-error");
-    if (err) err.style.display = "block";
-    document.getElementById("inp-pwd").value = "";
-  }
+async function accionArchivarMes(k) {
+  try {
+    if(S.mesesArchivados.has(k)) {
+      await dbDesarchivarMes(k);
+      S.mesesArchivados.delete(k);
+      S.mesesColapsados.delete(k);
+    } else {
+      await dbArchivarMes(k);
+      S.mesesArchivados.add(k);
+      S.mesesColapsados.add(k);
+    }
+    render();
+  } catch(e){alert("Error: "+e.message);}
 }
 
-function iniciarApp() {
-  document.getElementById("app").innerHTML = `
-    <div style="min-height:100vh;background:#F7F6F3;display:flex;align-items:center;justify-content:center;">
-      <p style="font-size:13px;color:#bbb;font-weight:500;letter-spacing:1px;">Cargando...</p>
-    </div>`;
-  Promise.all([dbCargar(), dbCargarRec()])
-    .then(([regs, recs]) => { S.registros = regs || []; S.recordatorios = recs || []; render(); })
-    .catch(e => {
-      document.getElementById("app").innerHTML = `
-        <div style="min-height:100vh;background:#F7F6F3;display:flex;align-items:center;justify-content:center;padding:24px;">
-          <p style="font-size:13px;color:#D94F3D;text-align:center;">Error al conectar:<br>${e.message}</p>
-        </div>`;
-    });
-}
-
-if (sessionStorage.getItem("auth") === "1") {
-  iniciarApp();
-} else {
-  mostrarLogin();
-}
-
+// ── Init ──────────────────────────────────────────────────────────────────
+if(sessionStorage.getItem("auth")==="1") iniciarApp();
+else mostrarLogin();
 </script>
 </body>
 </html>
