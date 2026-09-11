@@ -248,7 +248,7 @@ function render() {
       <!-- FILTROS -->
       <div style="display:flex;gap:6px;margin-top:20px;flex-wrap:wrap;">
         ${[["todos","Todo"],["gasto","Gastos"],["ingreso","Ingresos"],["movimiento","Internos"],["sin-categoria","Sin categoría"]].map(([v,l])=>`
-          <button onclick="S.filtro='${v}';render()" style="padding:6px 12px;border-radius:20px;font-size:11px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1'};">${l}</button>`).join("")}
+          <button onclick="S.filtro='${v}';render()" style="padding:6px 12px;border-radius:20px;font-size:11px;font-weight:500;background:${filtro===v?"#1a1a1a":"transparent"};color:${filtro===v?"#fff":"#999"};border:1.5px solid ${filtro===v?"#1a1a1a":"#E8E6E1"};">${l}</button>`).join("")}
       </div>
 
       <!-- LISTA POR MES -->
