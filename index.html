@@ -982,9 +982,7 @@ function miParteSW(r, montoCOP) {
 }
 
 function generarCSVSplitwiseConsolidado(registros) {
-  function sanCell(s) { return String(s||"").split("
-").join(" · ").split("
-").join("").split("	").join(" ").trim(); }
+  function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
   const distLabel = {
     "Coshitas": "50/50 Arturo",
     "Familia mitades": "50/50 Mamá",
