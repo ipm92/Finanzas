@@ -915,7 +915,7 @@ function mostrarExport() {
 }
 
 function generarCSVEgresos(registros) {
-    function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
+    function sanCell(s) { var x=String(s||""); var r=""; for(var i=0;i<x.length;i++){var cc=x.charCodeAt(i); if(cc===9||cc===10||cc===13){if(cc===10)r+=" · ";}else{r+=x[i];}} return r.trim(); }
   const rows = registros.map(r => {
     // 1. Convert to COP first
     const montoCOP = convertirCOP(r.monto, r.moneda);
@@ -938,7 +938,7 @@ function generarCSVEgresos(registros) {
 }
 
 function generarCSVIngresos(registros) {
-    function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
+    function sanCell(s) { var x=String(s||""); var r=""; for(var i=0;i<x.length;i++){var cc=x.charCodeAt(i); if(cc===9||cc===10||cc===13){if(cc===10)r+=" · ";}else{r+=x[i];}} return r.trim(); }
   const rows = registros.map(r => {
     const montoCOP = convertirCOP(r.monto, r.moneda);
     return [sanCell(r.descripcion), montoCOP, fechaCorta(r.fecha), sanCell(r.categoria), sanCell(cuentaLabel(r))].join("\t");
@@ -982,7 +982,7 @@ function miParteSW(r, montoCOP) {
 }
 
 function generarCSVSplitwiseConsolidado(registros) {
-  function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
+  function sanCell(s) { var x=String(s||""); var r=""; for(var i=0;i<x.length;i++){var cc=x.charCodeAt(i); if(cc===9||cc===10||cc===13){if(cc===10)r+=" · ";}else{r+=x[i];}} return r.trim(); }
   const distLabel = {
     "Coshitas": "50/50 Arturo",
     "Familia mitades": "50/50 Mamá",
@@ -1004,7 +1004,7 @@ function generarCSVSplitwiseConsolidado(registros) {
 }
 
 function generarCSVSplitwise(registros, tipo) {
-  function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
+  function sanCell(s) { var x=String(s||""); var r=""; for(var i=0;i<x.length;i++){var cc=x.charCodeAt(i); if(cc===9||cc===10||cc===13){if(cc===10)r+=" · ";}else{r+=x[i];}} return r.trim(); }
   const div = tipo.toLowerCase().includes("cuartos") && tipo.toLowerCase().includes("coshitas") ? 8
              : tipo.toLowerCase().includes("cuartos") ? 4
              : 2;
