@@ -989,7 +989,7 @@ function generarCSVSplitwiseConsolidado(registros) {
     "Familia cuartos": "25% × 4 (Familia)",
     "Familia cuartos + Coshitas": "12.5% × 8 (Familia + Coshitas)"
   };
-  const header = ["Grupo","Fecha","Descripción","Monto Total","Pagué yo?","Distribución","Mi parte"].join("	");
+  const header = ["Grupo","Fecha","Descripción","Monto Total","Pagué yo?","Distribución","Mi parte"].join("\t");
   const rows = registros.map(r => {
     const montoCOP = convertirCOP(r.monto, r.moneda);
     const div = splitDivisor(r.splitwiseTipo);
@@ -998,10 +998,9 @@ function generarCSVSplitwiseConsolidado(registros) {
     const pagueYo = /arturo pagó|mamá pagó|papá pagó|mama pagó|papa pagó/i.test(nota) ? "No" : "Sí";
     const grupo = r.splitwiseTipo || "";
     const dist = distLabel[grupo] || grupo;
-    return [grupo, fechaCorta(r.fecha), sanCell(r.descripcion), montoCOP, pagueYo, dist, miParte].join("	");
+    return [grupo, fechaCorta(r.fecha), sanCell(r.descripcion), montoCOP, pagueYo, dist, miParte].join("\t");
   });
-  return [header, ...rows].join("
-");
+  return [header, ...rows].join("\n");
 }
 
 function generarCSVSplitwise(registros, tipo) {
