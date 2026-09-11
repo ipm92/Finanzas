@@ -97,7 +97,7 @@ const CUENTAS_GASTO = [
   { id:"nequi",     label:"Nequi",                  color:"#7B4FBF" },
   { id:"efectivo",  label:"Efectivo",               color:"#2E7D32" },
   { id:"splitwise", label:"Splitwise",              color:"#E8760A" },
-  { id:"fic",       label:"FIC 1 Corredores",          color:"#00695C" },
+  { id:"fic",       label:"Corredores",          color:"#00695C" },
   { id:"otro",      label:"Otro",                    color:"#888888" },
 ];
 const CUENTAS_INGRESO = [
@@ -107,7 +107,7 @@ const CUENTAS_INGRESO = [
   { id:"nequi",     label:"Nequi",                  color:"#7B4FBF" },
   { id:"nubank",    label:"NuBank",                 color:"#6B2D9E" },
   { id:"daviplata", label:"Daviplata",              color:"#B8202A" },
-  { id:"fic",       label:"FIC 1 Corredores",          color:"#00695C" },
+  { id:"fic",       label:"Corredores",          color:"#00695C" },
   { id:"otro",      label:"Otro",                    color:"#888888" },
 ];
 const MONEDAS = [
@@ -805,7 +805,7 @@ const CUENTA_LABELS = {
   "nubank": "NuBank",
   "daviplata": "Daviplata",
   "efectivo": "Efectivo",
-  "fic": "FIC 1 Corredores",
+  "fic": "Corredores",
   "splitwise": "Splitwise",
   "otro": ""
 };
@@ -829,7 +829,7 @@ function miParteSplit(r) {
 
 function cuentaLabel(r) {
   if (r.cuenta === 'fic' && r.categoria === "CDT's al 2030") return "CDT's al 2030";
-  if (r.cuenta === 'fic') return "FIC 1 Corredores";
+  if (r.cuenta === 'fic') return "Corredores";
   if (r.splitwise) {
     const t = (r.splitwiseTipo || "").toLowerCase();
     if (t.includes("familia")) return "Splitwise Familia";
@@ -842,7 +842,7 @@ function cuentaLabel(r) {
     if (co === "Bolsillo Rappipay") return "Bolsillo Rappipay";
     return co;
   }
-  const OVERRIDES = {"nubank":"NuBank","davi-tc":"Davi TC","davi-td":"Cta ahorros Davivienda","rappi-tc":"Rappi TC","nequi":"Nequi","fic":"FIC 1 Corredores","efectivo":"Efectivo","daviplata":"Daviplata"};
+  const OVERRIDES = {"nubank":"NuBank","davi-tc":"Davi TC","davi-td":"Cta ahorros Davivienda","rappi-tc":"Rappi TC","nequi":"Nequi","fic":"Corredores","efectivo":"Efectivo","daviplata":"Daviplata"};
   return OVERRIDES[r.cuenta] || CUENTA_LABELS[r.cuenta] || r.cuenta || "";
 }
 
@@ -982,21 +982,28 @@ function miParteSW(r, montoCOP) {
 }
 
 function generarCSVSplitwiseConsolidado(registros) {
-  function sanCell(s) { return String(s||"").split("\n").join(" · ").split("\r").join("").split("\t").join(" ").trim(); }
-  const header = "Grupo\tFecha\tDescripción\tMonto Total\tPagué yo?\tDistribución\tMi parte";
+  function sanCell(s) { return String(s||"").split("
+").join(" · ").split("
+").join("").split("	").join(" ").trim(); }
+  const distLabel = {
+    "Coshitas": "50/50 Arturo",
+    "Familia mitades": "50/50 Mamá",
+    "Familia cuartos": "25% × 4 (Familia)",
+    "Familia cuartos + Coshitas": "12.5% × 8 (Familia + Coshitas)"
+  };
+  const header = ["Grupo","Fecha","Descripción","Monto Total","Pagué yo?","Distribución","Mi parte"].join("	");
   const rows = registros.map(r => {
-    const grupo = r.splitCustom ? "Custom" : (r.splitwiseTipo||"");
-    // r.monto is always the TOTAL (not mi parte)
-    const montoTotal = convertirCOP(r.monto, r.moneda);
-    const div = r.splitCustom ? 1 : splitDivisor(r.splitwiseTipo);
-    const pague = quienPago(r.nota);
-    const dist = sanCell(distribucionTexto(r));
-    const miParte = r.splitCustom
-      ? (typeof r.splitCustom === "string" ? JSON.parse(r.splitCustom) : r.splitCustom)["Isa"] || 0
-      : Math.round(montoTotal / div);
-    return [grupo, fechaCorta(r.fecha), sanCell(r.descripcion), montoTotal, pague, dist, miParte].join("\t");
+    const montoCOP = convertirCOP(r.monto, r.moneda);
+    const div = splitDivisor(r.splitwiseTipo);
+    const miParte = Math.round(montoCOP / div);
+    const nota = String(r.nota||"");
+    const pagueYo = /arturo pagó|mamá pagó|papá pagó|mama pagó|papa pagó/i.test(nota) ? "No" : "Sí";
+    const grupo = r.splitwiseTipo || "";
+    const dist = distLabel[grupo] || grupo;
+    return [grupo, fechaCorta(r.fecha), sanCell(r.descripcion), montoCOP, pagueYo, dist, miParte].join("	");
   });
-  return header + "\n" + rows.join("\n");
+  return [header, ...rows].join("
+");
 }
 
 function generarCSVSplitwise(registros, tipo) {
